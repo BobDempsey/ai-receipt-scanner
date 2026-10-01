@@ -1,0 +1,12 @@
+/* Mantine's own styles carry the reset and every token this app paints with.
+   What is left here is the full-height frame the two-pane workspace fills. */
+
+html,
+body {
+  height: 100%;
+}
+
+#__next,
+body > div {
+  min-height: 100%;
+}

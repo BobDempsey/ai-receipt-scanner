@@ -4,18 +4,18 @@ Slice 1 of the vertical-slice plan in the repo's `tasks.md`: the walking skeleto
 
 ## 1. Protect the tree, then scaffold in place
 
-- [ ] 1.1 Commit the working tree before anything is generated, and verify `git status` reports it clean with the commit on `main` and pushed to `origin`
-- [ ] 1.2 Write down the five protected paths that must not be deleted, emptied or overwritten (`ai-receipt-scanner-spec.md`, `handoff.md`, `tasks.md`, `openspec/`, `.claude/`) and verify each one exists before the generator runs
-- [ ] 1.3 Run `npx create-next-app@latest . --ts --app` **in this directory**, declining Tailwind, and verify the generator wrote `package.json`, `tsconfig.json`, `next.config.ts` and `app/layout.tsx` without touching any protected path. If the generator refuses to run because the directory is not empty, scaffold into a sibling temporary directory and copy the generated files in; never clear this directory to satisfy it
-- [ ] 1.4 Verify the five protected paths are still present and unmodified by reading `git status` and `git diff --stat`, and stop and report if any of them appears as changed or deleted
-- [ ] 1.5 Run `npm run dev` and verify the generated page loads at `http://localhost:3000`
+- [x] 1.1 Commit the working tree before anything is generated, and verify `git status` reports it clean with the commit on `main` and pushed to `origin`
+- [x] 1.2 Write down the five protected paths that must not be deleted, emptied or overwritten (`ai-receipt-scanner-spec.md`, `handoff.md`, `tasks.md`, `openspec/`, `.claude/`) and verify each one exists before the generator runs
+- [x] 1.3 Run `npx create-next-app@latest . --ts --app` **in this directory**, declining Tailwind, and verify the generator wrote `package.json`, `tsconfig.json`, `next.config.ts` and `app/layout.tsx` without touching any protected path. If the generator refuses to run because the directory is not empty, scaffold into a sibling temporary directory and copy the generated files in; never clear this directory to satisfy it
+- [x] 1.4 Verify the five protected paths are still present and unmodified by reading `git status` and `git diff --stat`, and stop and report if any of them appears as changed or deleted
+- [x] 1.5 Run `npm run dev` and verify the generated page loads at `http://localhost:3000`
 
 ## 2. Mantine
 
-- [ ] 2.1 Install `@mantine/core`, `@mantine/hooks`, `postcss-preset-mantine`, `postcss-simple-vars` and `postcss`, and verify `npm install` completes and `package.json` lists all five
-- [ ] 2.2 Add `postcss.config.mjs` with `postcss-preset-mantine` and `postcss-simple-vars`, and verify the dev server restarts without a PostCSS error
-- [ ] 2.3 Put `ColorSchemeScript` in the root layout's `<head>` and wrap the body in `MantineProvider`, importing `@mantine/core/styles.css`, and verify a Mantine `Button` on the page renders with Mantine's styles rather than the browser default
-- [ ] 2.4 Confirm Tailwind is absent from `package.json`, `postcss.config.mjs` and `app/globals.css`, and remove it if the generator added it anyway
+- [x] 2.1 Install `@mantine/core`, `@mantine/hooks`, `postcss-preset-mantine`, `postcss-simple-vars` and `postcss`, and verify `npm install` completes and `package.json` lists all five
+- [x] 2.2 Add `postcss.config.mjs` with `postcss-preset-mantine` and `postcss-simple-vars`, and verify the dev server restarts without a PostCSS error
+- [x] 2.3 Put `ColorSchemeScript` in the root layout's `<head>` and wrap the body in `MantineProvider`, importing `@mantine/core/styles.css`, and verify a Mantine `Button` on the page renders with Mantine's styles rather than the browser default
+- [x] 2.4 Confirm Tailwind is absent from `package.json`, `postcss.config.mjs` and `app/globals.css`, and remove it if the generator added it anyway
 
 ## 3. The shared Zod schema
 
