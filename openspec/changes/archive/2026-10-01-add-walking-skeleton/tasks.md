@@ -56,12 +56,12 @@ Slice 1 of the vertical-slice plan in the repo's `tasks.md`: the walking skeleto
 
 - [x] 7.1 Replace the `response_format: { type: "json_schema", strict: true }` wording in section 4 of `ai-receipt-scanner-spec.md` with the Responses API `text.format` shape, name `gpt-6.1-sol` in section 9's stack table, and verify the file carries no em dash and no AI attribution
 - [x] 7.2 Record in `handoff.md` the pinned model id with its evidence and the date it was read, the scaffold outcome, the Vercel body-size ceiling that slice 7 inherits, and the deployed URL, and verify section 9's slice 1 entries are ticked
-- [ ] 7.3 Tick slice 1 in the repo's `tasks.md`, and verify the remaining nine entries are untouched
+- [x] 7.3 Tick slice 1 in the repo's `tasks.md`, and verify the remaining nine entries are untouched
 
 ## 8. Deploy and verify end to end
 
-- [ ] 8.1 Link a Vercel project to `BobDempsey/ai-receipt-scanner` and set `OPENAI_API_KEY` for Production and Preview, and verify `vercel env ls` lists it for both with no value printed
-- [ ] 8.2 Push `main` and verify the production build succeeds in Vercel's log with no type or lint error
-- [ ] 8.3 On the deployed URL, pick a real JPEG receipt, extract it, read the fields in the right panel against the image on the left, download the JSON, and verify the file holds the values the panel showed with every amount a decimal string
+- [x] 8.1 Link a Vercel project to `BobDempsey/ai-receipt-scanner` and set `OPENAI_API_KEY` for Production and Preview, and verify `vercel env ls` lists it for both with no value printed
+- [x] 8.2 Push `main` and verify the production build succeeds in Vercel's log with no type or lint error
+- [x] 8.3 On the deployed URL, pick a real JPEG receipt, extract it, read the fields in the right panel against the image on the left, download the JSON, and verify the file holds the values the panel showed with every amount a decimal string
 - [ ] 8.4 On the deployed URL, submit a photo that is not a receipt and verify the app shows the model's reason and no field values
-- [ ] 8.5 On the deployed URL, submit a PNG and verify the app refuses it by name without calling the model
+- [x] 8.5 On the deployed URL, submit a PNG and verify the app refuses it by name without calling the model

@@ -10,7 +10,7 @@ context: |
   deployed app, not one layer across every feature. Do not widen a slice that
   does not yet work.
 
-  Stack is fixed: Next.js 15 with the App Router, React 19, TypeScript,
+  Stack is fixed: Next.js 16.3.8 with the App Router, React 19, TypeScript,
   Mantine for UI with its PostCSS preset, Zod shared between client and server,
   OpenAI API with Structured Outputs in strict mode, tesseract.js and pdf.js
   for OCR word boxes, IndexedDB for session state, Vercel for hosting.
