@@ -1,6 +1,7 @@
 # Remaining tasks
 
-- [ ] Commit the existing docs, then set up OpenSpec
+- [x] Commit the existing docs and set up OpenSpec
+- [ ] Seed the capability specs and push to GitHub
 - [ ] Slice 1: walking skeleton, JPEG to fields to JSON, deployed
 - [ ] Slice 2: line items and the arithmetic warnings
 - [ ] Slice 3: inline editing with recheck on every edit

@@ -4,7 +4,9 @@
 
 ## 1. State of the project
 
-Nothing is built. The directory holds one file, `ai-receipt-scanner-spec.md`, and now this handoff and `tasks.md`. There is no `package.json`, no Next scaffold, and no git repository yet (`git init` has not been run). Every section below is read off the spec or established this session, not off working code.
+No application code exists yet. The repo holds `ai-receipt-scanner-spec.md`, this handoff, `tasks.md`, and the OpenSpec scaffold. There is no `package.json` and no Next scaffold. Every section below is read off the spec or established in session, not off working code.
+
+Done on 2026-10-01: `git init` on `main`, with the three Markdown files committed as `1f670e5` before anything was generated. `openspec init --tools claude` run, which created `openspec/` (`specs/`, `changes/archive/`, `config.yaml` on the `spec-driven` schema) and six `/opsx:` commands with their skills under `.claude/`. `openspec/config.yaml` now carries the project context: read the handoff first, build in vertical slices, the fixed stack, the nothing-is-stored rule, the decimal and arithmetic rules, the no-deletion rule, and the prose rules. `openspec/specs/` is still empty.
 
 ## 2. What the project is
 
@@ -36,9 +38,10 @@ Demo URL will be `https://ai-receipt-scanner.bobdempsey83.com`, repo `BobDempsey
 - **Money is a decimal string, never a float.**
 - **Nothing is stored.** Uploads live in memory for the length of the request. Results live in the browser. The only server-side state is rate-limit counters. This is stated on the page next to the drop zone, not buried in About.
 - **Currency is inferred from the symbol and locale**, never silently defaulted to USD.
+- **Delegate the building to background agents.** Bob wants to keep talking while the work happens, so implementation runs in subagents rather than inline on the main thread. One agent per slice, or per independent piece of a slice, launched together in a single message when the pieces do not depend on each other. Report what came back; do not make him wait on a tool call to ask a question. This overrides the harness default of not spawning agents unasked, and it was asked for on 2026-10-01.
 - **Agents do most of the development, in vertical slices.** Each OpenSpec change is one thin path through every layer rather than one layer across every feature: upload, model call, validation, form, export, deployed and working before the next slice starts. The first slice is a walking skeleton (a single JPEG to the flat fields to a JSON download, live on Vercel), and every slice after it widens that path. No slice is finished until it runs end to end in the deployed app, which is what makes the work checkable without a human reading the diff.
 - **The slice order is the order of risk, not of layers.** Highlighting and the accuracy fixtures come after editing and arithmetic, because they are the parts most likely to need rework, and rework on top of a working path costs less than rework on top of a half-built layer. Section 9 lists everything outstanding as an inventory; `tasks.md` carries the slice order.
-- **The work runs through OpenSpec.** `npm i -g @fission-ai/openspec` then `openspec init` in the repo, which writes the adapter files for Claude Code. The loop is `/opsx:explore` to think an idea through, `/opsx:propose` to draft the change and its spec deltas, `/opsx:apply` to implement against the plan, `/opsx:archive` to fold the finished change back into the main specs. Needs Node 20.19 or higher.
+- **The work runs through OpenSpec**, already initialized. Run it with `npx @fission-ai/openspec@latest` rather than a global install. The loop is `/opsx:explore` to think an idea through, `/opsx:propose` to draft the change and its spec deltas, `/opsx:apply` to implement against the plan, `/opsx:archive` to fold the finished change back into the main specs. Needs Node 20.19 or higher; this machine has Node 24.19.0. Six more workflows (`new`, `continue`, `ff`, `bulk-archive`, `verify`, `onboard`) are available behind `openspec config profile` and are not installed.
 - **`ai-receipt-scanner-spec.md` stays the product spec.** OpenSpec's `openspec/specs/` holds the capability specs derived from it, one per capability rather than one long document. When the two disagree, fix the product spec in the same change rather than letting the delta carry the correction alone.
 
 ## 5. The field set
@@ -94,9 +97,11 @@ The baseline every portfolio project has to meet lives at `C:\code\bobdempsey83.
 
 This is an inventory of everything outstanding, grouped by area for lookup. It is not the build order; `tasks.md` carries that, as vertical slices.
 
-- [ ] `git init` and commit the three existing Markdown files first, so the scaffold has something to be diffed against and nothing can be lost silently.
-- [ ] First commit pushed to `BobDempsey/ai-receipt-scanner`.
-- [ ] Install OpenSpec and run `openspec init`, then seed `openspec/specs/` from `ai-receipt-scanner-spec.md`, splitting it by capability (extraction, highlighting, arithmetic, export, limits).
+- [x] ~~`git init` and commit the three existing Markdown files first.~~ **Done**, `1f670e5`.
+- [ ] Create `BobDempsey/ai-receipt-scanner` on GitHub and push `main`. No remote is set.
+- [x] ~~Install OpenSpec and run `openspec init`.~~ **Done**, including the project context in `openspec/config.yaml`.
+- [ ] Commit the OpenSpec scaffold, which is currently untracked.
+- [ ] Seed `openspec/specs/` from `ai-receipt-scanner-spec.md`, splitting it by capability (extraction, highlighting, arithmetic, export, limits). Still empty apart from `.gitkeep`.
 - [ ] Run every piece of work below through `/opsx:propose`, `/opsx:apply`, `/opsx:archive` rather than editing straight into the tree.
 - [x] ~~Clone or locate the bobdempsey83.com repo and read `docs/portfolio-project-spec.md`.~~ **Done.** It is at `C:\code\bobdempsey83.com`; the requirements are section 7 above.
 - [ ] Scaffold Next.js 15 in place, App Router, TypeScript, then add Mantine, including `postcss-preset-mantine` and the `MantineProvider` with `ColorSchemeScript` in the root layout.
