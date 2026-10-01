@@ -1,5 +1,9 @@
-import { Button } from "@mantine/core";
+import { ReceiptWorkspace } from "@/components/ReceiptWorkspace";
 
 export default function Home() {
-  return <Button>Mantine smoke test</Button>;
+  return (
+    <main>
+      <ReceiptWorkspace />
+    </main>
+  );
 }

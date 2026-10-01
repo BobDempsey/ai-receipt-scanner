@@ -19,38 +19,38 @@ Slice 1 of the vertical-slice plan in the repo's `tasks.md`: the walking skeleto
 
 ## 3. The shared Zod schema
 
-- [ ] 3.1 Write the slice 1 schema module holding `isReceipt`, `reason`, `merchant`, `merchantAddress`, `date`, `time`, `currency`, `subtotal`, `taxes[]` (`label`, `amount`), `tip`, `total`, `paymentMethod` and `cardLast4`, each with its flat `…Confidence` and `…SourceText` sibling keys, using `.nullable()` and never `.optional()`, and verify `tsc --noEmit` passes
-- [ ] 3.2 Type every monetary value as a string carrying a decimal regex, and verify the schema rejects a JSON number for `total` and accepts the string `"42.00"` with its trailing zeros intact
-- [ ] 3.3 Install Vitest and add schema tests covering a full receipt, every nullable field absent, two tax lines, a number where a decimal string belongs, and a confidence outside 0 to 1, and verify `npm test` passes
-- [ ] 3.4 Keep the pinned model id `gpt-6.1-sol` in its own module with a comment recording that it was read off OpenAI's model list on 2026-10-01 and carries `image_input` and `structured_outputs`, and verify the route imports it from there rather than naming a model inline
+- [x] 3.1 Write the slice 1 schema module holding `isReceipt`, `reason`, `merchant`, `merchantAddress`, `date`, `time`, `currency`, `subtotal`, `taxes[]` (`label`, `amount`), `tip`, `total`, `paymentMethod` and `cardLast4`, each with its flat `…Confidence` and `…SourceText` sibling keys, using `.nullable()` and never `.optional()`, and verify `tsc --noEmit` passes
+- [x] 3.2 Type every monetary value as a string carrying a decimal regex, and verify the schema rejects a JSON number for `total` and accepts the string `"42.00"` with its trailing zeros intact
+- [x] 3.3 Install Vitest and add schema tests covering a full receipt, every nullable field absent, two tax lines, a number where a decimal string belongs, and a confidence outside 0 to 1, and verify `npm test` passes
+- [x] 3.4 Keep the pinned model id `gpt-6.1-sol` in its own module with a comment recording that it was read off OpenAI's model list on 2026-10-01 and carries `image_input` and `structured_outputs`, and verify the route imports it from there rather than naming a model inline
 
 ## 4. The extraction route
 
-- [ ] 4.1 Add `app/api/extract/route.ts` on the Node runtime, reading one file from `FormData`, and verify a `curl` post of a JPEG reaches the handler
-- [ ] 4.2 Reject anything that is not `image/jpeg` with `{ error: { code: "not_jpeg" } }`, and verify a PNG post is refused without an OpenAI call
-- [ ] 4.3 Encode the uploaded bytes as a base64 data URL in memory and pass them as the image input of one `client.responses.create()` call, with `text.format` set to the strict JSON Schema derived from the Zod schema, and verify the route writes nothing to disk and makes exactly one call per request
-- [ ] 4.4 Validate the parsed object with the same Zod schema before returning, and verify that a deliberately broken parse returns `{ error: { code: "validation_failed" } }` carrying no Zod issue text, no field paths and no fragment of the model's answer
-- [ ] 4.5 Log the failing field paths on a validation failure without the uploaded bytes and without the model's full answer, and verify the server log shows the paths and neither of the two
-- [ ] 4.6 Return 200 with `reason` filled and the field values null when `isReceipt` is false, and verify a photo of a menu comes back as a refusal rather than an error
-- [ ] 4.7 Read `OPENAI_API_KEY` on the server only, add `.env.example` listing it with a placeholder, keep `.env.local` out of git, and verify `npm run build` then a grep of `.next/static` finds no trace of the key
-- [ ] 4.8 Add route tests covering the not-a-JPEG refusal, the validation failure response and the `isReceipt: false` path with the OpenAI client stubbed, and verify `npm test` passes
+- [x] 4.1 Add `app/api/extract/route.ts` on the Node runtime, reading one file from `FormData`, and verify a `curl` post of a JPEG reaches the handler
+- [x] 4.2 Reject anything that is not `image/jpeg` with `{ error: { code: "not_jpeg" } }`, and verify a PNG post is refused without an OpenAI call
+- [x] 4.3 Encode the uploaded bytes as a base64 data URL in memory and pass them as the image input of one `client.responses.create()` call, with `text.format` set to the strict JSON Schema derived from the Zod schema, and verify the route writes nothing to disk and makes exactly one call per request
+- [x] 4.4 Validate the parsed object with the same Zod schema before returning, and verify that a deliberately broken parse returns `{ error: { code: "validation_failed" } }` carrying no Zod issue text, no field paths and no fragment of the model's answer
+- [x] 4.5 Log the failing field paths on a validation failure without the uploaded bytes and without the model's full answer, and verify the server log shows the paths and neither of the two
+- [x] 4.6 Return 200 with `reason` filled and the field values null when `isReceipt` is false, and verify a photo of a menu comes back as a refusal rather than an error
+- [x] 4.7 Read `OPENAI_API_KEY` on the server only, add `.env.example` listing it with a placeholder, keep `.env.local` out of git, and verify `npm run build` then a grep of `.next/static` finds no trace of the key
+- [x] 4.8 Add route tests covering the not-a-JPEG refusal, the validation failure response and the `isReceipt: false` path with the OpenAI client stubbed, and verify `npm test` passes
 
 ## 5. The workspace
 
-- [ ] 5.1 Build the client component holding the chosen file, the request state and the result, with a file picker that replaces the chosen file rather than queuing a second one, and verify picking twice leaves one file selected
-- [ ] 5.2 Show the storage policy next to the picker, stating that the upload lives in memory for the length of the request and the result lives in the browser, and verify it is on screen before any file is chosen
-- [ ] 5.3 Lay the workspace out with the document pane on the left at full height and the field panel on the right, stacking the two on a narrow viewport, and verify at a phone width that the panes stack and the page scrolls only downward
-- [ ] 5.4 Render the chosen JPEG in the document pane as soon as it is picked, and verify the image is on screen while the extraction is still in flight
-- [ ] 5.5 Render the extracted fields read-only in the right panel with each field's value and confidence, showing an absent field as absent rather than as 0 or empty, and verify a receipt with no tip shows `tip` as absent
-- [ ] 5.6 Print every monetary value as the decimal string the app holds, with no reformatting, rounding or localizing, and verify a `total` of `"42.00"` renders as 42.00
-- [ ] 5.7 Show which state the workspace is in (waiting, working, result, not a receipt, failed), and verify the working state replaces the field panel rather than leaving an empty panel on screen
-- [ ] 5.8 On an error, show the failure where the field panel would be, keep the document pane as it is, and offer a control that resubmits the same file once per press, with `validation_failed` reading that the model's answer did not match the shape the app expects and suggesting the same file again or a clearer photo. Verify nothing resubmits on its own
-- [ ] 5.9 Verify the key never reaches the browser by reading the network tab on a failed extraction and confirming the response body carries no credentials
+- [x] 5.1 Build the client component holding the chosen file, the request state and the result, with a file picker that replaces the chosen file rather than queuing a second one, and verify picking twice leaves one file selected
+- [x] 5.2 Show the storage policy next to the picker, stating that the upload lives in memory for the length of the request and the result lives in the browser, and verify it is on screen before any file is chosen
+- [x] 5.3 Lay the workspace out with the document pane on the left at full height and the field panel on the right, stacking the two on a narrow viewport, and verify at a phone width that the panes stack and the page scrolls only downward
+- [x] 5.4 Render the chosen JPEG in the document pane as soon as it is picked, and verify the image is on screen while the extraction is still in flight
+- [x] 5.5 Render the extracted fields read-only in the right panel with each field's value and confidence, showing an absent field as absent rather than as 0 or empty, and verify a receipt with no tip shows `tip` as absent
+- [x] 5.6 Print every monetary value as the decimal string the app holds, with no reformatting, rounding or localizing, and verify a `total` of `"42.00"` renders as 42.00
+- [x] 5.7 Show which state the workspace is in (waiting, working, result, not a receipt, failed), and verify the working state replaces the field panel rather than leaving an empty panel on screen
+- [x] 5.8 On an error, show the failure where the field panel would be, keep the document pane as it is, and offer a control that resubmits the same file once per press, with `validation_failed` reading that the model's answer did not match the shape the app expects and suggesting the same file again or a clearer photo. Verify nothing resubmits on its own
+- [x] 5.9 Verify the key never reaches the browser by reading the network tab on a failed extraction and confirming the response body carries no credentials
 
 ## 6. The JSON download
 
-- [ ] 6.1 Add a JSON download of the validated object, carrying every field with its `…Confidence` and `…SourceText` siblings plus `isReceipt` and `reason`, and verify the saved file parses and holds the confidence values
-- [ ] 6.2 Verify the download works on the receipt on screen with no session table in the app, and that every monetary string in the file keeps its digits and both decimal places
+- [x] 6.1 Add a JSON download of the validated object, carrying every field with its `…Confidence` and `…SourceText` siblings plus `isReceipt` and `reason`, and verify the saved file parses and holds the confidence values
+- [x] 6.2 Verify the download works on the receipt on screen with no session table in the app, and that every monetary string in the file keeps its digits and both decimal places
 
 ## 7. Fold the decisions back into the documents
 

@@ -1,0 +1,52 @@
+/* Two panes on a wide screen, stacked on a narrow one. The document pane runs the
+   full height of the row so a visitor checks a value against the printed receipt
+   without scrolling between the two. */
+
+.panes {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--mantine-spacing-md);
+  align-items: stretch;
+}
+
+@media (min-width: $mantine-breakpoint-md) {
+  .panes {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    min-height: 60vh;
+  }
+}
+
+.documentPane {
+  min-height: rem(240px);
+}
+
+.fieldPane {
+  min-width: 0;
+}
+
+.preview {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 70vh;
+  object-fit: contain;
+  border-radius: var(--mantine-radius-sm);
+}
+
+.picker {
+  flex: 1 1 rem(260px);
+  min-width: rem(220px);
+}
+
+.headline {
+  font-size: rem(40px);
+  letter-spacing: rem(-1px);
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+@media (min-width: $mantine-breakpoint-sm) {
+  .headline {
+    font-size: rem(48px);
+  }
+}
