@@ -3,7 +3,7 @@
 - [x] Commit the existing docs and set up OpenSpec
 - [x] Seed the capability specs
 - [x] Create the GitHub repo and push main
-- [ ] Slice 1: walking skeleton, JPEG to fields to JSON, deployed
+- [ ] Slice 1: walking skeleton, JPEG to fields to JSON, deployed (built and passing locally; the deploy and its five end-to-end checks wait on a key and a Vercel link)
 - [ ] Slice 2: line items and the arithmetic warnings
 - [ ] Slice 3: inline editing with recheck on every edit
 - [ ] Slice 4: OCR word boxes and click-to-highlight

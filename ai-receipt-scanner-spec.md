@@ -45,7 +45,7 @@ Money is a decimal string, never a float, and it is parsed with Zod on the way o
 
 ## 4. How the extraction works
 
-**One model call per receipt.** The image goes to a vision-capable GPT model with Structured Outputs, `response_format: { type: "json_schema", strict: true }`, whose schema is the field set above. Strict mode forces the shape, so there is no JSON parsing out of prose and no retry loop around a malformed response. Zod validates the parsed object a second time on the server, because a schema the model satisfies can still be wrong about types.
+**One model call per receipt.** The image goes to `gpt-6.1-sol` with Structured Outputs on the Responses API, `text: { format: { type: "json_schema", strict: true, schema } }`, whose schema is the field set above. Strict mode forces the shape, so there is no JSON parsing out of prose and no retry loop around a malformed response. Zod validates the parsed object a second time on the server, because a schema the model satisfies can still be wrong about types.
 
 **Per-field confidence comes from the model.** Every field in the response schema carries a sibling `confidence` between 0 and 1 and a `sourceText` holding the characters the model read the value from. Anything under 0.8 is flagged for review in the UI.
 
@@ -94,9 +94,9 @@ Document the failure cases in the README rather than hiding them: faded thermal 
 
 | Layer | Choice |
 | --- | --- |
-| Framework | Next.js 15, React 19, TypeScript |
+| Framework | Next.js 16, React 19, TypeScript |
 | UI | Mantine, with its PostCSS preset |
-| Model | OpenAI API, a vision-capable GPT model, Structured Outputs in strict mode |
+| Model | OpenAI API, `gpt-6.1-sol`, Structured Outputs in strict mode on the Responses API |
 | Validation | Zod, shared between the client and the server route |
 | OCR for boxes | tesseract.js in a web worker, pdf.js for PDFs with a text layer |
 | Session state | IndexedDB |

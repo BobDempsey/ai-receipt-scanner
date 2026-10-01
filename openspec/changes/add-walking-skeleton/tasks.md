@@ -54,8 +54,8 @@ Slice 1 of the vertical-slice plan in the repo's `tasks.md`: the walking skeleto
 
 ## 7. Fold the decisions back into the documents
 
-- [ ] 7.1 Replace the `response_format: { type: "json_schema", strict: true }` wording in section 4 of `ai-receipt-scanner-spec.md` with the Responses API `text.format` shape, name `gpt-6.1-sol` in section 9's stack table, and verify the file carries no em dash and no AI attribution
-- [ ] 7.2 Record in `handoff.md` the pinned model id with its evidence and the date it was read, the scaffold outcome, the Vercel body-size ceiling that slice 7 inherits, and the deployed URL, and verify section 9's slice 1 entries are ticked
+- [x] 7.1 Replace the `response_format: { type: "json_schema", strict: true }` wording in section 4 of `ai-receipt-scanner-spec.md` with the Responses API `text.format` shape, name `gpt-6.1-sol` in section 9's stack table, and verify the file carries no em dash and no AI attribution
+- [x] 7.2 Record in `handoff.md` the pinned model id with its evidence and the date it was read, the scaffold outcome, the Vercel body-size ceiling that slice 7 inherits, and the deployed URL, and verify section 9's slice 1 entries are ticked
 - [ ] 7.3 Tick slice 1 in the repo's `tasks.md`, and verify the remaining nine entries are untouched
 
 ## 8. Deploy and verify end to end

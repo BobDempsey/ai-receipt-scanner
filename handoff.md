@@ -1,12 +1,24 @@
 # Handoff: AI Receipt Scanner
 
-**Last updated:** 2026-10-01 (first entry; baseline spec read and folded in the same day)
+**Last updated:** 2026-10-01 (slice 1 built locally; deployment still outstanding)
 
 ## 1. State of the project
 
 No application code exists yet. The repo holds `ai-receipt-scanner-spec.md`, this handoff, `tasks.md`, and the OpenSpec scaffold. There is no `package.json` and no Next scaffold. Every section below is read off the spec or established in session, not off working code.
 
 Done on 2026-10-01: `git init` on `main`, with the three Markdown files committed as `1f670e5` before anything was generated. `openspec init --tools claude` run, which created `openspec/` (`specs/`, `changes/archive/`, `config.yaml` on the `spec-driven` schema) and six `/opsx:` commands with their skills under `.claude/`. `openspec/config.yaml` now carries the project context: read the handoff first, build in vertical slices, the fixed stack, the nothing-is-stored rule, the decimal and arithmetic rules, the no-deletion rule, and the prose rules. `openspec/specs/` now holds five capability specs (extraction, highlighting, arithmetic, export, limits), seeded from the product spec and passing `openspec validate --specs --strict`, committed as `ee43c38`.
+
+Done later on 2026-10-01: slice 1 of the vertical-slice plan, the walking skeleton, built and verified locally. What exists now is a Next.js tree with the App Router, Mantine wired through `postcss-preset-mantine` with `ColorSchemeScript` and `MantineProvider` in the root layout, the shared Zod schema in `lib/receipt-schema.ts`, the pinned model in `lib/model.ts`, the extraction path in `lib/extract-receipt.ts` behind `app/api/extract/route.ts`, and the two-pane workspace in `components/`. Lint, `tsc --noEmit` and 29 Vitest tests pass. The five end-to-end checks on a deployed URL are untouched, because no key and no Vercel link exist on this machine yet.
+
+**The scaffold needed the fallback.** `create-next-app@latest` now treats every non-hidden file in the directory as a conflict, including `handoff.md`, `tasks.md`, `ai-receipt-scanner-spec.md` and `openspec/`, and refuses to run. It was generated into a sibling temporary directory and the generated files copied in. No protected path was touched; `git status` showed only additions. Anyone scaffolding again in this repo should expect the same refusal and reach for the copy-in route rather than arguing with the generator.
+
+**The generator gives Next 16, not Next 15.** `create-next-app@latest` installed `next@16.3.8` with React 19.2.8, so the stack row in `ai-receipt-scanner-spec.md` now reads Next.js 16. Nothing in the slice depended on 15. Next 16 also writes its own `AGENTS.md` and `CLAUDE.md` at the repo root on every dev-server start unless `agentRules: false` sits in `next.config.ts`, which it now does, because this project keeps its agent instructions in `.claude/` and this file.
+
+**The model is pinned to `gpt-6.1-sol`** in `lib/model.ts`, read off OpenAI's published model list on 2026-10-01: `image_input` and `structured_outputs` among its features, text and image input, a 1,050,000-token context window with 128,000 output tokens, and $2 per million input tokens against `gpt-6-astra` at $10. `gpt-6-luna` at $0.10 per million stays the candidate to measure against once slice 9 has the 40 labelled fixtures. The id lives in one module so the swap is one line. Nothing has exercised a live request against it yet, so the Responses API call shape in `lib/extract-receipt.ts` is written from the documented contract and still unproven.
+
+**Vercel caps a serverless request body at 4.5 MB**, well under the 8 MB file cap the spec names, and base64 adds about a third on top. `lib/extract-receipt.ts` enforces 8 MB today and answers `too_large` above it. Slice 7 owns the real cap and will need client-side downscaling before the post.
+
+**Slice 1 answered the Zod-failure open point.** A validation failure answers with the code `validation_failed` and a fixed message, carrying no Zod issue text, no field paths and no fragment of the model's answer. The server logs the failing field paths alone, never the bytes and never the model's answer. The route makes no second call; the workspace offers a control the visitor presses, and nothing retries by itself. The visitor reads that the model's answer did not match the shape the app expects, with a suggestion to try the same file again or a clearer photograph.
 
 ## 2. What the project is
 
@@ -86,7 +98,7 @@ The baseline every portfolio project has to meet lives at `C:\code\bobdempsey83.
 - **The AI feature label has to agree across the card, the README and the app.** The spec's badges are `AI Vision` and `AI Extraction`; `OpenAI LLM` is derived from the tech list, so do not hand-write it as a third `ai` entry.
 - **The baseline's "seed it with data so every screen has something on it" meets a project that stores nothing.** The three sample receipts are what satisfies it. A cold load has to show the samples under the drop zone, not an empty session table alone.
 - **One of the three sample receipts must have a line-item sum that does not match its printed subtotal**, so a visitor sees the arithmetic warning without hunting for a bad receipt. All three samples are labelled fictional on the page.
-- **`OPENAI_API_KEY` is not set anywhere yet.** No `.env` exists.
+- **`OPENAI_API_KEY` is still not set on this machine.** `.env.example` now lists it with a placeholder and `.gitignore` keeps every `.env` file but that one out of git. The route reads `process.env.OPENAI_API_KEY` on the server at call time and answers `model_call_failed` when it is missing, which is exactly what a local extraction does today. Put the real key in `.env.local` to run the path end to end.
 - **Pin the model id before wiring the route.** The spec now says "a vision-capable GPT model" rather than naming one, because the id should be read off OpenAI's current model list at build time rather than carried in from a stale note. Structured Outputs in strict mode and image input both need checking against whichever id gets picked.
 - **Mantine replaces Tailwind, it does not sit beside it.** Running both means two resets and two sources of spacing truth, so the baseline's UI requirements (one shared max width, a 4xl or 5xl headline with tight tracking, one accent color) are expressed in Mantine's theme and CSS modules. `Tailwind CSS` also comes off the portfolio card's tech list, where `Mantine` takes its slot.
 - **Mantine's own color-scheme script is what satisfies the no-flash rule.** `ColorSchemeScript` in the root layout plus `useMantineColorScheme` for the nav toggle covers the baseline's "apply the stored theme before first paint" requirement; do not hand-roll a second theme store next to it.
@@ -105,9 +117,9 @@ This is an inventory of everything outstanding, grouped by area for lookup. It i
 - [x] ~~Seed `openspec/specs/` from `ai-receipt-scanner-spec.md`, split by capability.~~ **Done**, `ee43c38`.
 - [ ] Run every piece of work below through `/opsx:propose`, `/opsx:apply`, `/opsx:archive` rather than editing straight into the tree.
 - [x] ~~Clone or locate the bobdempsey83.com repo and read `docs/portfolio-project-spec.md`.~~ **Done.** It is at `C:\code\bobdempsey83.com`; the requirements are section 7 above.
-- [ ] Scaffold Next.js 15 in place, App Router, TypeScript, then add Mantine, including `postcss-preset-mantine` and the `MantineProvider` with `ColorSchemeScript` in the root layout.
-- [ ] Zod schema for the field set, shared between client and server, with the `confidence` and `sourceText` siblings plus `isReceipt` and `reason`.
-- [ ] Server route: one OpenAI call per receipt using Structured Outputs in strict mode, Zod-validated, in-memory only.
+- [x] ~~Scaffold Next.js in place, App Router, TypeScript, then add Mantine, including `postcss-preset-mantine` and the `MantineProvider` with `ColorSchemeScript` in the root layout.~~ **Done** in slice 1, as Next 16 by way of a sibling temporary directory.
+- [x] ~~Zod schema for the field set, shared between client and server, with the `confidence` and `sourceText` siblings plus `isReceipt` and `reason`.~~ **Done** in slice 1 as `lib/receipt-schema.ts`, flat suffixed siblings, every field nullable and never optional. `lineItems` arrives in slice 2.
+- [x] ~~Server route: one OpenAI call per receipt using Structured Outputs in strict mode, Zod-validated, in-memory only.~~ **Done** in slice 1 as `app/api/extract/route.ts` over `lib/extract-receipt.ts`, on the Node runtime, with the image inline as a base64 data URL. Unexercised against a live key.
 - [ ] Arithmetic checker with named-difference warnings.
 - [ ] OCR word-box pipeline: tesseract.js web worker for images, pdf.js text layer for PDFs.
 - [ ] Fuzzy matcher from `sourceText` to word boxes, with a threshold below which no highlight shows.
@@ -118,19 +130,19 @@ This is an inventory of everything outstanding, grouped by area for lookup. It i
 - [ ] Accessibility pass: keyboard reach, visible focus rings, alt text, accessible names on icon-only buttons, phone width.
 - [ ] CSS-only motion behind `prefers-reduced-motion: no-preference`, nothing on first paint.
 - [ ] Inline editing, with a recheck on every edit.
-- [ ] Export: JSON and CSV, download and copy, single receipt and batch.
+- [ ] Export: CSV, copy to clipboard, and batch. The single-receipt JSON download landed in slice 1.
 - [ ] Session table in IndexedDB keyed to the tab session.
-- [ ] Storage-policy copy next to the drop zone.
+- [x] ~~Storage-policy copy next to the drop zone.~~ **Done** in slice 1, beside the file picker and readable before a file is chosen. Slice 8 restates it for the landing page.
 - [ ] Three fictional sample receipts: thermal grocery with many line items, restaurant with a tip and two tax lines, scanned PDF invoice.
 - [ ] File size, type, page and batch enforcement on both sides; IP and session rate limits.
 - [ ] 40 hand-labelled receipt fixtures with expected output; field-level accuracy reported, with `total` and `date` broken out separately.
-- [ ] Vitest for the schema, the arithmetic and the matcher; Playwright for upload to export.
+- [ ] Vitest for the arithmetic and the matcher; Playwright for upload to export. The schema, the route branches, the field rows and the JSON download already have 29 Vitest tests from slice 1.
 - [ ] README: live link and screenshot first, then the stack table, then setup from a clean clone, then how the extraction works, then the accuracy numbers and the documented failure cases (faded thermal paper, handwritten totals, angled photos, uncovered languages).
 - [ ] About page in plain language: pipeline, stack, honest limits, same accuracy numbers.
-- [ ] `.env.example` with `OPENAI_API_KEY` as a placeholder.
+- [x] ~~`.env.example` with `OPENAI_API_KEY` as a placeholder.~~ **Done** in slice 1, with `.gitignore` carrying `.env*` and `!.env.example`.
 - [x] ~~GitHub repo settings: description, Website set to the subdomain, topics.~~ **Done** at creation. Revisit the topics only if the stack changes.
 - [ ] CI on GitHub Actions: lint, typecheck, tests on every push.
-- [ ] Deploy to Vercel at `ai-receipt-scanner.bobdempsey83.com`, Web Analytics in production builds only.
+- [ ] Deploy to Vercel at `ai-receipt-scanner.bobdempsey83.com`, Web Analytics in production builds only. **Blocked on a human:** the Vercel CLI is not installed on this machine and the project is not linked, so slice 1's five end-to-end checks are outstanding. A person has to run `npm i -g vercel`, `vercel login`, `vercel link`, `vercel env add OPENAI_API_KEY` for Production and Preview, then `vercel --prod`.
 - [ ] Portfolio card under `content/portfolio/` in the bobdempsey83.com repo: `ai` badges `AI Vision` and `AI Extraction`, tech ordered `OpenAI API`, `Next.js`, `TypeScript`, `Mantine`, `tesseract.js`, with `Zod` and `Vercel` behind the five-entry cut. The description leads with the AI feature.
 - [ ] Regenerate `public/chat-context.json` in that repo.
 - [ ] Add the project to `resumeProjects` in `app/utils/portfolio-data.ts` and regenerate the PDF.
