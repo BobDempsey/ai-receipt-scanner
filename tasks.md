@@ -2,7 +2,7 @@
 
 - [x] Commit the existing docs and set up OpenSpec
 - [x] Seed the capability specs
-- [ ] Create the GitHub repo and push main
+- [x] Create the GitHub repo and push main
 - [ ] Slice 1: walking skeleton, JPEG to fields to JSON, deployed
 - [ ] Slice 2: line items and the arithmetic warnings
 - [ ] Slice 3: inline editing with recheck on every edit

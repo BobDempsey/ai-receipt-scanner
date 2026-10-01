@@ -99,7 +99,7 @@ The baseline every portfolio project has to meet lives at `C:\code\bobdempsey83.
 This is an inventory of everything outstanding, grouped by area for lookup. It is not the build order; `tasks.md` carries that, as vertical slices.
 
 - [x] ~~`git init` and commit the three existing Markdown files first.~~ **Done**, `1f670e5`.
-- [ ] Create `BobDempsey/ai-receipt-scanner` on GitHub and push `main`. No remote is set.
+- [x] ~~Create `BobDempsey/ai-receipt-scanner` on GitHub and push `main`.~~ **Done.** Public, `origin` set over HTTPS, `main` tracking. The description, the `homepageUrl` pointing at the custom subdomain, and twelve topics are set, so the baseline's GitHub-settings requirement is already met.
 - [x] ~~Install OpenSpec and run `openspec init`.~~ **Done**, including the project context in `openspec/config.yaml`.
 - [x] ~~Commit the OpenSpec scaffold.~~ **Done**, `06a6d11`.
 - [x] ~~Seed `openspec/specs/` from `ai-receipt-scanner-spec.md`, split by capability.~~ **Done**, `ee43c38`.
@@ -128,7 +128,7 @@ This is an inventory of everything outstanding, grouped by area for lookup. It i
 - [ ] README: live link and screenshot first, then the stack table, then setup from a clean clone, then how the extraction works, then the accuracy numbers and the documented failure cases (faded thermal paper, handwritten totals, angled photos, uncovered languages).
 - [ ] About page in plain language: pipeline, stack, honest limits, same accuracy numbers.
 - [ ] `.env.example` with `OPENAI_API_KEY` as a placeholder.
-- [ ] GitHub repo settings: description, Website set to the subdomain rather than the `vercel.app` URL, topics for the technique, stack and host.
+- [x] ~~GitHub repo settings: description, Website set to the subdomain, topics.~~ **Done** at creation. Revisit the topics only if the stack changes.
 - [ ] CI on GitHub Actions: lint, typecheck, tests on every push.
 - [ ] Deploy to Vercel at `ai-receipt-scanner.bobdempsey83.com`, Web Analytics in production builds only.
 - [ ] Portfolio card under `content/portfolio/` in the bobdempsey83.com repo: `ai` badges `AI Vision` and `AI Extraction`, tech ordered `OpenAI API`, `Next.js`, `TypeScript`, `Mantine`, `tesseract.js`, with `Zod` and `Vercel` behind the five-entry cut. The description leads with the AI feature.
