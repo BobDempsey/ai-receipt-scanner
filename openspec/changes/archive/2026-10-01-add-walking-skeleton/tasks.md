@@ -63,5 +63,5 @@ Slice 1 of the vertical-slice plan in the repo's `tasks.md`: the walking skeleto
 - [x] 8.1 Link a Vercel project to `BobDempsey/ai-receipt-scanner` and set `OPENAI_API_KEY` for Production and Preview, and verify `vercel env ls` lists it for both with no value printed
 - [x] 8.2 Push `main` and verify the production build succeeds in Vercel's log with no type or lint error
 - [x] 8.3 On the deployed URL, pick a real JPEG receipt, extract it, read the fields in the right panel against the image on the left, download the JSON, and verify the file holds the values the panel showed with every amount a decimal string
-- [ ] 8.4 On the deployed URL, submit a photo that is not a receipt and verify the app shows the model's reason and no field values
+- [x] 8.4 On the deployed URL, submit a photo that is not a receipt and verify the app shows the model's reason and no field values
 - [x] 8.5 On the deployed URL, submit a PNG and verify the app refuses it by name without calling the model
