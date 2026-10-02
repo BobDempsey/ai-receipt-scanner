@@ -28,23 +28,23 @@ Slice 2 of the vertical-slice plan in the repo's `tasks.md`: line items and the 
 
 ## 4. The line items and the warnings on screen
 
-- [ ] 4.1 Add a stable `field` key to the rows `lib/receipt-fields.ts` returns for `subtotal` and `total`, and a computed `lineItemsTotal` row carrying the item sum with no confidence, and verify the existing field-row tests still pass
-- [ ] 4.2 Render the line items read-only in `components/FieldPanel.tsx` below the flat fields, one row per item with its description, quantity, unit price and amount in printed order, and verify a six-item receipt shows six rows in order
-- [ ] 4.3 Flag an item row for review when one of its four confidences is below 0.8, the way a flat field is flagged, and verify a row with an `amount` confidence of 0.61 carries the review badge
-- [ ] 4.4 Show an absent item value as absent rather than as 0 or an empty cell, and verify an item with a null `quantity` reads as absent
-- [ ] 4.5 Show the computed item total beside `subtotal`, labelled as computed, and show that the app read no line items when `lineItems` is empty rather than showing a total of 0.00. Verify both states
-- [ ] 4.6 Print every item amount and the computed total as the decimal string the app holds, with no reformatting, rounding or localizing, and verify an amount of "42.00" renders as 42.00
-- [ ] 4.7 Show each warning on both rows it names, with the message the module composed, and verify a subtotal mismatch marks the item total row and the `subtotal` row while leaving both values as they are
-- [ ] 4.8 Run the checker in `components/ReceiptWorkspace.tsx` when a result arrives, holding the warnings beside the receipt in component state, and verify no second request leaves the browser when the warnings appear
-- [ ] 4.9 Extend the field-panel tests with a six-item receipt, an empty `lineItems`, a low-confidence item value, a subtotal mismatch and a total mismatch, and verify `npm test` passes
+- [x] 4.1 Add a stable `field` key to the rows `lib/receipt-fields.ts` returns for `subtotal` and `total`, and a computed `lineItemsTotal` row carrying the item sum with no confidence, and verify the existing field-row tests still pass
+- [x] 4.2 Render the line items read-only in `components/FieldPanel.tsx` below the flat fields, one row per item with its description, quantity, unit price and amount in printed order, and verify a six-item receipt shows six rows in order
+- [x] 4.3 Flag an item row for review when one of its four confidences is below 0.8, the way a flat field is flagged, and verify a row with an `amount` confidence of 0.61 carries the review badge
+- [x] 4.4 Show an absent item value as absent rather than as 0 or an empty cell, and verify an item with a null `quantity` reads as absent
+- [x] 4.5 Show the computed item total beside `subtotal`, labelled as computed, and show that the app read no line items when `lineItems` is empty rather than showing a total of 0.00. Verify both states
+- [x] 4.6 Print every item amount and the computed total as the decimal string the app holds, with no reformatting, rounding or localizing, and verify an amount of "42.00" renders as 42.00
+- [x] 4.7 Show each warning on both rows it names, with the message the module composed, and verify a subtotal mismatch marks the item total row and the `subtotal` row while leaving both values as they are
+- [x] 4.8 Run the checker in `components/ReceiptWorkspace.tsx` when a result arrives, holding the warnings beside the receipt in component state, and verify no second request leaves the browser when the warnings appear
+- [x] 4.9 Extend the field-panel tests with a six-item receipt, an empty `lineItems`, a low-confidence item value, a subtotal mismatch and a total mismatch, and verify `npm test` passes
 
 ## 5. The export
 
-- [ ] 5.1 Change `receiptToJson` in `lib/receipt-json.ts` to the envelope holding the validated receipt under `receipt` and the warnings under `warnings`, and verify the saved file parses and carries both keys
-- [ ] 5.2 Write `warnings` as an empty array when both checks pass rather than omitting the key, and verify a balancing receipt downloads with `"warnings": []`
-- [ ] 5.3 Carry every line item with its `…Confidence` and `…SourceText` siblings into the file, and verify a six-item receipt exports six entries under `receipt.lineItems`
-- [ ] 5.4 Keep every monetary value a decimal string with its digits and both decimal places, in the field set and in each warning's difference, and verify a `total` of "42.00" and a difference of "0.50" both reach the file as strings
-- [ ] 5.5 Add export tests over the envelope, the empty `warnings` array, the items and a warned receipt exporting with its values unaltered, and verify `npm test` passes
+- [x] 5.1 Change `receiptToJson` in `lib/receipt-json.ts` to the envelope holding the validated receipt under `receipt` and the warnings under `warnings`, and verify the saved file parses and carries both keys
+- [x] 5.2 Write `warnings` as an empty array when both checks pass rather than omitting the key, and verify a balancing receipt downloads with `"warnings": []`
+- [x] 5.3 Carry every line item with its `…Confidence` and `…SourceText` siblings into the file, and verify a six-item receipt exports six entries under `receipt.lineItems`
+- [x] 5.4 Keep every monetary value a decimal string with its digits and both decimal places, in the field set and in each warning's difference, and verify a `total` of "42.00" and a difference of "0.50" both reach the file as strings
+- [x] 5.5 Add export tests over the envelope, the empty `warnings` array, the items and a warned receipt exporting with its values unaltered, and verify `npm test` passes
 
 ## 6. Fold the decisions back into the documents
 

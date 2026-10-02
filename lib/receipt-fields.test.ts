@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { fieldRows, isAbsent, needsReview } from "./receipt-fields";
+import { arithmeticWarnings } from "./arithmetic";
+import {
+  fieldRows,
+  isAbsent,
+  itemNeedsReview,
+  lineItemRows,
+  needsReview,
+  readNoLineItems,
+} from "./receipt-fields";
 import { receiptToJson } from "./receipt-json";
 import {
   receiptSchema,
@@ -154,16 +162,147 @@ describe("fieldRows", () => {
   });
 });
 
+describe("fieldRows carries the identifiers a warning names", () => {
+  it("names subtotal and total so a warning attaches to a row rather than to a label", () => {
+    const rows = fieldRows(receipt());
+    expect(row(rows, "Subtotal").field).toBe("subtotal");
+    expect(row(rows, "Total").field).toBe("total");
+  });
+
+  it("shows the computed item total beside subtotal, with no confidence", () => {
+    const rows = fieldRows(receipt());
+    const items = row(rows, "Line item total");
+
+    expect(items.value).toBe("38.40");
+    expect(items.computed).toBe(true);
+    expect(items.confidence).toBeNull();
+    expect(items.field).toBe("lineItemsTotal");
+    expect(rows.indexOf(items)).toBe(rows.indexOf(row(rows, "Subtotal")) + 1);
+  });
+
+  it("shows no item total row at all when the app read no line items", () => {
+    expect(fieldRows(receipt({ lineItems: [] })).some((candidate) => candidate.computed)).toBe(
+      false,
+    );
+    expect(readNoLineItems(receipt({ lineItems: [] }))).toBe(true);
+    expect(readNoLineItems(receipt({ lineItems: null }))).toBe(true);
+    expect(readNoLineItems(receipt())).toBe(false);
+  });
+
+  it("shows the item total as absent when one item amount is missing", () => {
+    const items = sixItems();
+    items[2] = lineItem({ amount: null, amountConfidence: null, amountSourceText: null });
+    const total = row(fieldRows(receipt({ lineItems: items })), "Line item total");
+
+    expect(total.value).toBeNull();
+    expect(total.note).toContain("did not sum");
+  });
+
+  it("prints the item total as the decimal string the app holds", () => {
+    const rows = fieldRows(
+      receipt({ subtotal: "42.00", lineItems: [lineItem({ amount: "42.00" })] }),
+    );
+    expect(row(rows, "Line item total").value).toBe("42.00");
+  });
+});
+
+describe("lineItemRows", () => {
+  it("gives one row per item in the printed order", () => {
+    const rows = lineItemRows(receipt());
+    expect(rows).toHaveLength(6);
+    expect(rows.map((candidate) => candidate.position)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(rows.map((candidate) => candidate.description.value)).toEqual([
+      "Oat milk",
+      "Coffee beans",
+      "Sourdough",
+      "Bananas",
+      "Cheddar",
+      "Olive oil",
+    ]);
+  });
+
+  it("hands each item value over unchanged", () => {
+    const rows = lineItemRows(receipt());
+    expect(rows[3].quantity.value).toBe("0.734");
+    expect(rows[4].quantity.value).toBe("2");
+    expect(rows[1].unitPrice.value).toBe("12.50");
+    expect(rows[5].amount.value).toBe("6.00");
+  });
+
+  it("gives no rows when the app read no items", () => {
+    expect(lineItemRows(receipt({ lineItems: [] }))).toEqual([]);
+    expect(lineItemRows(receipt({ lineItems: null }))).toEqual([]);
+  });
+
+  it("flags an item row when one of its four confidences falls below the threshold", () => {
+    const items = [lineItem({ amountConfidence: 0.61 }), lineItem()];
+    const rows = lineItemRows(receipt({ lineItems: items }));
+
+    expect(itemNeedsReview(rows[0])).toBe(true);
+    expect(itemNeedsReview(rows[1])).toBe(false);
+  });
+
+  it("shows a quantity the receipt did not print as absent", () => {
+    const items = [
+      lineItem({ quantity: null, quantityConfidence: null, quantitySourceText: null }),
+    ];
+    const rows = lineItemRows(receipt({ lineItems: items }));
+
+    expect(rows[0].quantity.value).toBeNull();
+    expect(isAbsent(rows[0].quantity)).toBe(true);
+  });
+});
+
+describe("a warning reaches both rows it names", () => {
+  it("marks the item total row and the subtotal row on a subtotal mismatch", () => {
+    const mismatched = receipt({
+      subtotal: "47.60",
+      total: "51.20",
+      lineItems: [lineItem({ amount: "48.10" })],
+    });
+    const warnings = arithmeticWarnings(mismatched);
+    const rows = fieldRows(mismatched);
+    const marked = rows.filter((candidate) => {
+      const field = candidate.field;
+      return field !== undefined && warnings.some((warning) => warning.fields.includes(field));
+    });
+
+    expect(marked.map((candidate) => candidate.field)).toEqual(["subtotal", "lineItemsTotal"]);
+    expect(row(rows, "Subtotal").value).toBe("47.60");
+    expect(row(rows, "Line item total").value).toBe("48.10");
+    expect(warnings[0].message).toContain("0.50 more than");
+  });
+
+  it("marks the subtotal row and the total row on a total mismatch", () => {
+    const mismatched = receipt({ subtotal: "38.40", total: "42.20", lineItems: [] });
+    const warnings = arithmeticWarnings(mismatched);
+
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].fields).toEqual(["subtotal", "total"]);
+    expect(warnings[0].difference).toBe("0.20");
+  });
+
+  it("marks nothing when both checks pass", () => {
+    expect(arithmeticWarnings(receipt())).toEqual([]);
+  });
+});
+
 describe("receiptToJson", () => {
+  it("writes the receipt and the warnings as two keys of one envelope", () => {
+    const parsed = JSON.parse(receiptToJson(receipt(), []));
+    expect(Object.keys(parsed)).toEqual(["receipt", "warnings"]);
+    expect(parsed.receipt.merchant).toBe("Pier Cafe");
+  });
+
   it("keeps every monetary value a string with its decimal places", () => {
-    const file = receiptToJson(receipt());
+    const file = receiptToJson(receipt(), []);
     expect(file).toContain('"total": "42.00"');
     expect(file).toContain('"amount": "3.60"');
-    expect(JSON.parse(file).total).toBe("42.00");
+    expect(JSON.parse(file).receipt.total).toBe("42.00");
   });
 
   it("carries the confidence and source text siblings plus isReceipt and reason", () => {
-    const parsed = JSON.parse(receiptToJson(receipt()));
+    const parsed = JSON.parse(receiptToJson(receipt(), [])).receipt;
     expect(parsed.totalConfidence).toBe(0.96);
     expect(parsed.totalSourceText).toBe("TOTAL 42.00");
     expect(parsed.taxes[0].amountConfidence).toBe(0.62);
@@ -171,8 +310,47 @@ describe("receiptToJson", () => {
     expect(parsed).toHaveProperty("reason", null);
   });
 
-  it("round-trips through the schema the server validated with", () => {
-    const parsed = JSON.parse(receiptToJson(receipt()));
-    expect(receiptSchema.safeParse(parsed).success).toBe(true);
+  it("round-trips the receipt through the schema the server validated with", () => {
+    const parsed = JSON.parse(receiptToJson(receipt(), []));
+    expect(receiptSchema.safeParse(parsed.receipt).success).toBe(true);
+  });
+
+  it("writes warnings as an empty array rather than omitting the key", () => {
+    const balanced = receipt();
+    const file = receiptToJson(balanced, arithmeticWarnings(balanced));
+
+    expect(file).toContain('"warnings": []');
+    expect(JSON.parse(file).warnings).toEqual([]);
+  });
+
+  it("carries every line item with its confidence and source text siblings", () => {
+    const parsed = JSON.parse(receiptToJson(receipt(), [])).receipt;
+
+    expect(parsed.lineItems).toHaveLength(6);
+    expect(parsed.lineItems[3].quantity).toBe("0.734");
+    expect(parsed.lineItems[3].quantityConfidence).toBe(0.9);
+    expect(parsed.lineItems[3].amountSourceText).toBe("4.99");
+    expect(parsed.lineItems[5].amount).toBe("6.00");
+  });
+
+  it("carries a warning with its difference as a decimal string, beside unaltered values", () => {
+    const mismatched = receipt({
+      subtotal: "47.60",
+      total: "51.20",
+      lineItems: [lineItem({ amount: "48.10" })],
+    });
+    const file = receiptToJson(mismatched, arithmeticWarnings(mismatched));
+    const parsed = JSON.parse(file);
+
+    expect(parsed.warnings).toHaveLength(1);
+    expect(parsed.warnings[0].check).toBe("line-items-sum");
+    expect(parsed.warnings[0].fields).toEqual(["lineItemsTotal", "subtotal"]);
+    expect(parsed.warnings[0].difference).toBe("0.50");
+    expect(typeof parsed.warnings[0].difference).toBe("string");
+    expect(file).toContain('"difference": "0.50"');
+
+    expect(parsed.receipt.subtotal).toBe("47.60");
+    expect(parsed.receipt.lineItems[0].amount).toBe("48.10");
+    expect(receiptSchema.safeParse(parsed.receipt).success).toBe(true);
   });
 });

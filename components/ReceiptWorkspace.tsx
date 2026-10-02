@@ -14,6 +14,7 @@ import {
   Title,
 } from "@mantine/core";
 import { FieldPanel } from "./FieldPanel";
+import { arithmeticWarnings, type ArithmeticWarning } from "@/lib/arithmetic";
 import { RECEIPT_JSON_FILENAME, receiptToJson } from "@/lib/receipt-json";
 import {
   isExtractionError,
@@ -51,6 +52,12 @@ export function ReceiptWorkspace() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("waiting");
   const [receipt, setReceipt] = useState<Receipt | null>(null);
+  /**
+   * The arithmetic warnings, held beside the receipt rather than folded into it,
+   * because they are derived in the browser and the Zod schema governs the object
+   * they would otherwise sit inside.
+   */
+  const [warnings, setWarnings] = useState<ArithmeticWarning[]>([]);
   const [failure, setFailure] = useState<ExtractionErrorCode | null>(null);
   const inFlight = useRef(false);
 
@@ -68,6 +75,7 @@ export function ReceiptWorkspace() {
     });
     setFile(next);
     setReceipt(null);
+    setWarnings([]);
     setFailure(null);
     setPhase("waiting");
   }, []);
@@ -84,6 +92,7 @@ export function ReceiptWorkspace() {
     inFlight.current = true;
     setPhase("working");
     setReceipt(null);
+    setWarnings([]);
     setFailure(null);
 
     try {
@@ -100,6 +109,9 @@ export function ReceiptWorkspace() {
       }
 
       setReceipt(body);
+      // The checks run here, on what the browser already holds. No second request
+      // leaves the page to produce a warning.
+      setWarnings(body.isReceipt ? arithmeticWarnings(body) : []);
       setPhase(body.isReceipt ? "result" : "not-a-receipt");
     } catch {
       setFailure("model_call_failed");
@@ -114,14 +126,14 @@ export function ReceiptWorkspace() {
       return;
     }
 
-    const blob = new Blob([receiptToJson(receipt)], { type: "application/json" });
+    const blob = new Blob([receiptToJson(receipt, warnings)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
     link.download = RECEIPT_JSON_FILENAME;
     link.click();
     URL.revokeObjectURL(url);
-  }, [receipt]);
+  }, [receipt, warnings]);
 
   return (
     <Container size="xl" py="xl">
@@ -132,8 +144,9 @@ export function ReceiptWorkspace() {
           </Title>
           <Text c="dimmed" maw="65ch">
             Pick a photograph of a receipt. One model call reads it into typed
-            fields, the app checks the answer against its own schema, and the JSON
-            download carries what the model gave with the confidence it gave it.
+            fields and its line items, the app checks the answer against its own
+            schema and its own arithmetic, and the JSON download carries what the
+            model gave with the confidence it gave it.
           </Text>
         </Stack>
 
@@ -205,7 +218,7 @@ export function ReceiptWorkspace() {
 
             {phase === "result" && receipt ? (
               <Stack gap="md">
-                <FieldPanel receipt={receipt} />
+                <FieldPanel receipt={receipt} warnings={warnings} />
                 <Group>
                   <Button variant="light" onClick={download}>
                     Download the JSON
