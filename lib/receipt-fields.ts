@@ -195,6 +195,11 @@ export function lineItemCells(row: LineItemRow): FieldRow[] {
   return [row.description, row.quantity, row.unitPrice, row.amount];
 }
 
+/** True when the visitor typed one of an item's four values. */
+export function itemVisitorTyped(row: LineItemRow): boolean {
+  return lineItemCells(row).some(isVisitorTyped);
+}
+
 /** True when one of an item's four values sits below the review threshold. */
 export function itemNeedsReview(row: LineItemRow): boolean {
   return lineItemCells(row).some(needsReview);

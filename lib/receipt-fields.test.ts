@@ -11,6 +11,7 @@ import {
   isAbsent,
   isVisitorTyped,
   itemNeedsReview,
+  itemVisitorTyped,
   lineItemRows,
   needsReview,
   readNoLineItems,
@@ -383,6 +384,26 @@ describe("the rows tell a typed value from a read one", () => {
 
   it("marks nothing when the visitor has edited nothing", () => {
     expect(fieldRows(receipt()).some(isVisitorTyped)).toBe(false);
+    expect(lineItemRows(receipt()).some(itemVisitorTyped)).toBe(false);
+  });
+
+  it("marks the item row the visitor typed into and leaves the others alone", () => {
+    const rows = lineItemRows(receipt(), ["lineItems.2.amount"]);
+
+    expect(itemVisitorTyped(rows[2])).toBe(true);
+    expect(itemVisitorTyped(rows[1])).toBe(false);
+  });
+
+  it("drops an item row's review flag once the corrected cell carries no confidence", () => {
+    const items = sixItems();
+    items[0] = lineItem({ amountConfidence: 0.61 });
+    expect(itemNeedsReview(lineItemRows(receipt({ lineItems: items }))[0])).toBe(true);
+
+    items[0] = lineItem({ amountConfidence: null });
+    const corrected = lineItemRows(receipt({ lineItems: items }), ["lineItems.0.amount"])[0];
+
+    expect(itemNeedsReview(corrected)).toBe(false);
+    expect(itemVisitorTyped(corrected)).toBe(true);
   });
 });
 

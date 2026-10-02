@@ -7,3 +7,15 @@
   outline: rem(2px) solid var(--mantine-primary-color-filled);
   outline-offset: rem(1px);
 }
+
+/* A cell the visitor typed into, so a reader scanning the table can tell a value
+   a person entered from one the model read without reading the badge beside it. */
+
+.editedInput {
+  border-left: rem(3px) solid var(--mantine-color-blue-6);
+}
+
+.editedInput:focus-visible {
+  outline: rem(2px) solid var(--mantine-primary-color-filled);
+  outline-offset: rem(1px);
+}

@@ -19,6 +19,7 @@ import {
   fieldRows,
   isVisitorTyped,
   itemNeedsReview,
+  itemVisitorTyped,
   lineItemRows,
   needsReview,
   readNoLineItems,
@@ -102,9 +103,9 @@ function EditableCell({
 
   return (
     <TextInput
-      aria-label={name}
+      aria-label={isVisitorTyped(row) ? `${name}, you typed this` : name}
       value={draft}
-      classNames={{ input: classes.cellInput }}
+      classNames={{ input: isVisitorTyped(row) ? classes.editedInput : classes.cellInput }}
       error={rejection}
       placeholder="absent"
       size="xs"
@@ -298,6 +299,11 @@ function LineItemRowCells({
       <Table.Td>
         <Group gap="xs" wrap="nowrap" align="flex-start">
           <div style={{ flex: 1, minWidth: 0 }}>{cell(row.description, "left")}</div>
+          {itemVisitorTyped(row) ? (
+            <Badge color="blue" variant="light" size="xs">
+              you typed this
+            </Badge>
+          ) : null}
           {itemNeedsReview(row) ? (
             <Badge color="yellow" variant="light" size="xs">
               check this
