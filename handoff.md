@@ -1,6 +1,6 @@
 # Handoff: AI Receipt Scanner
 
-**Last updated:** 2026-10-02 (slices 1 and 2 done, live in production and archived; a key rotation is outstanding)
+**Last updated:** 2026-10-02 (slices 1, 2 and 3 done and live in production; slices 1 and 2 are archived, slice 3 is not; a key rotation is outstanding)
 
 ## 1. State of the project
 
@@ -31,6 +31,16 @@ Done later on 2026-10-01: slice 1 of the vertical-slice plan, the walking skelet
 Done on 2026-10-02: slice 2, the line items and the arithmetic warnings, built, verified locally against the live key and deployed. `lineItems` is in both schemas, `lib/decimal.ts` does exact decimal arithmetic over scaled `BigInt`, `lib/arithmetic.ts` runs the two checks as a pure function in the browser, the field panel lists the items and prints each warning on both rows it names, and the JSON download is now an envelope of `receipt` plus `warnings`. Lint, `tsc --noEmit` and 117 Vitest tests pass.
 
 **Slice 2 is live and verified in production.** Deployment `dpl_8JCsXMqFcHbHnGM31dEScPxTKveL`, built from commit `bbf62c1`, answers at https://ai-receipt-scanner.bobdempsey83.com. Against that URL a grocery receipt listed every line item with its quantity, unit price and amount and the computed item total matched the printed subtotal, a receipt whose items do not sum raised the warning on both rows naming the difference, a restaurant receipt with a tip and two tax lines passed the total check, the downloaded JSON carried the items and the warning with its difference as a decimal string, and an upload that itemizes nothing reported no line items and still ran the total check. The OpenSpec change `add-line-items-and-arithmetic` is archived under `openspec/changes/archive/2026-10-02-add-line-items-and-arithmetic/`, its deltas folded into the `arithmetic`, `export`, `extraction` and `receipt-workspace` specs, and `openspec validate --all --strict` passes on all six capability specs.
+
+Done later on 2026-10-02: slice 3, inline editing with a recheck on every edit. `lib/field-edit.ts` names every editable value by the property path the receipt already uses, reads each field's validator off `receiptSchema` rather than restating a pattern, applies one committed edit as a pure transformation, and adds and removes a line item. The field panel renders each editable value as a Mantine `TextInput`, the workspace holds the edited list and the standing refusals beside the receipt and the warnings, and the JSON download gained a third key. Lint, `tsc --noEmit` and 193 Vitest tests pass. The OpenSpec change `add-inline-editing` is implemented and not archived.
+
+**Slice 3 settled three decisions.** An edit is kept on commit rather than per keystroke: blur or Enter writes it, Escape puts back the value the field held, and the cell holds the draft in its own state until then, so a half-typed `2026-1` is refused by nobody. A field the visitor overwrote carries a null confidence and keeps the `sourceText` the model read the original from, so the review flag clears with no second rule and nothing claims a certainty on the visitor's behalf; the edited list held beside the receipt is what tells a typed value from a read one, because the Zod schema governs what sits inside the receipt object. And an edit lives as long as the receipt on screen, which means a reload loses both, so the panel says beside the download that the download is how a correction leaves the app.
+
+**Add and remove of a line item stayed in scope.** A line the model missed is the common reason the items do not reach the printed subtotal, and the app corrects no number on the visitor's behalf, so without add the visitor could only close the gap by editing a number the receipt did not print. An added entry is a blank one the schema already accepts, and `lineItemTotal` already reports `incomplete` and skips the sum check while an item amount is missing.
+
+**The download envelope gained a third key.** The file is now `{ "receipt": { … }, "warnings": [ … ], "edited": [ … ] }`, where `edited` names each field the visitor typed into in the property path the receipt uses, such as `total` or `lineItems.3.amount`. It is always present and empty when the visitor changed nothing, matching what slice 2 decided for `warnings`. Slice 6's batch export inherits that shape.
+
+**Slice 3 answered the two details the design left open.** The add control sits under the line item table, so the row it creates appears directly above it and tabbing off the last amount reaches the remove control for that row and then the add control, rather than passing the add control on the way in. A refused cell shows the value the receipt kept rather than the text the visitor typed, because the `receipt-workspace` delta's own scenario asks for the previous value; the refusal sentence under the control names the refused text, so the visitor still reads what the app would not take.
 
 ## 2. What the project is
 
@@ -124,6 +134,11 @@ The baseline every portfolio project has to meet lives at `C:\code\bobdempsey83.
 - **`.playwright-mcp/` is gitignored.** The browser-driven production checks need their input files inside the workspace root, so the receipt images and the downloaded JSON land there. Nothing in that directory belongs in the repo, and the ignore rule is what keeps test receipts out of git.
 - **All four portfolio AI projects now run on OpenAI.** The original spec put this one on Claude so the portfolio showed two providers; that argument is gone, so the card and the README have to lean on the shape of the app instead.
 
+- **A refused edit shows the field's previous value, not the text the visitor typed.** The sentence under the control carries the refused text instead. Anyone changing that has to change the `field-editing` and `receipt-workspace` scenarios with it, because the delta asks the panel to show the value the field held before the edit.
+- **The line item row keys live in the workspace and never reach the receipt.** `components/ReceiptWorkspace.tsx` keeps a parallel array of generated keys used as the React key alone. Keying a row off its index hands a removed row's draft text to the row that took its place, and the schema has no room for an id and should not grow one, because an id is a fact about this browser tab.
+- **An index-path address shifts when an item is removed.** `remapAddressOnRemove` in `lib/field-edit.ts` is what follows a recorded edit and a standing refusal through that shift, and the workspace calls it on both. Anything else that keys off `lineItems.<n>.<cell>` has to go through the same function.
+- **The product spec's section 5 promises a reload keeps the session table, and slice 3 does not.** Nothing in the spec is wrong: IndexedDB is slice 6, and until it lands the receipt and its edits both die with the page. Slice 6 is the change that reconciles the two, and the panel states the slice 3 lifetime beside the download in the meantime.
+
 - **Scaffold into this directory without destroying it.** `ai-receipt-scanner-spec.md`, `handoff.md` and `tasks.md` are the only files here and they are the whole record of the project, so losing them loses everything decided so far. `create-next-app` refuses to scaffold over conflicting files but is happy alongside non-conflicting ones, and those three conflict with nothing it writes, so `npx create-next-app@latest . --ts` in place is safe. Check `git status` after it runs and confirm all three are still there and unmodified. If any tool wants to empty the directory first, scaffold into a sibling temp directory and copy the generated files in instead.
 
 ## 9. Not done
@@ -149,14 +164,14 @@ This is an inventory of everything outstanding, grouped by area for lookup. It i
 - [ ] Closing action band before the footer.
 - [ ] Accessibility pass: keyboard reach, visible focus rings, alt text, accessible names on icon-only buttons, phone width.
 - [ ] CSS-only motion behind `prefers-reduced-motion: no-preference`, nothing on first paint.
-- [ ] Inline editing, with a recheck on every edit. The checker to recheck with exists; slice 3 wires it to an edit.
+- [x] ~~Inline editing, with a recheck on every edit.~~ **Done** in slice 3 as `lib/field-edit.ts` behind editable cells in `components/FieldPanel.tsx`, with the workspace rerunning `arithmeticWarnings` on every accepted edit, add and remove.
 - [ ] Export: CSV, copy to clipboard, and batch. The single-receipt JSON download landed in slice 1 and became the `receipt` plus `warnings` envelope in slice 2.
 - [ ] Session table in IndexedDB keyed to the tab session.
 - [x] ~~Storage-policy copy next to the drop zone.~~ **Done** in slice 1, beside the file picker and readable before a file is chosen. Slice 8 restates it for the landing page.
 - [ ] Three fictional sample receipts: thermal grocery with many line items, restaurant with a tip and two tax lines, scanned PDF invoice.
 - [ ] File size, type, page and batch enforcement on both sides; IP and session rate limits.
 - [ ] 40 hand-labelled receipt fixtures with expected output; field-level accuracy reported, with `total` and `date` broken out separately.
-- [ ] Playwright for upload to export. Vitest covers the schema, the route branches, the field rows, the line items, the decimal module, the arithmetic checks and the JSON envelope in 117 tests across slices 1 and 2. The matcher's tests arrive with slice 4.
+- [ ] Playwright for upload to export. Vitest covers the schema, the route branches, the field rows, the line items, the decimal module, the arithmetic checks, the edit module and the JSON envelope in 193 tests across slices 1, 2 and 3. The matcher's tests arrive with slice 4.
 - [ ] README: live link and screenshot first, then the stack table, then setup from a clean clone, then how the extraction works, then the accuracy numbers and the documented failure cases (faded thermal paper, handwritten totals, angled photos, uncovered languages).
 - [ ] About page in plain language: pipeline, stack, honest limits, same accuracy numbers.
 - [x] ~~`.env.example` with `OPENAI_API_KEY` as a placeholder.~~ **Done** in slice 1, with `.gitignore` carrying `.env*` and `!.env.example`.
