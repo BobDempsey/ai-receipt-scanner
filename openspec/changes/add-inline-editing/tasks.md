@@ -4,27 +4,29 @@ Slice 3 of the vertical-slice plan in the repo's `tasks.md`: inline editing with
 
 ## 1. Field addresses and the per-field validator
 
-- [ ] 1.1 Add `lib/field-edit.ts` with an address type covering a flat field, a tax entry cell and a line item entry cell, plus the string form (`total`, `taxes.1.amount`, `lineItems.3.amount`) that the export carries, and verify `tsc --noEmit` passes
-- [ ] 1.2 Resolve each address to its validator off `receiptSchema` itself, taking `shape[key]` for a flat field and unwrapping the nullable array to the element shape for a tax or an item cell, with no regex restated in the module. Verify by reading the module and confirming it imports `receiptSchema` and declares no pattern of its own
-- [ ] 1.3 Enumerate the editable addresses for a given receipt, leaving out `isReceipt`, `reason`, every `…Confidence`, every `…SourceText` and the computed item total, and verify the list holds the eleven flat fields plus two cells per tax entry plus four cells per line item
-- [ ] 1.4 Add Vitest coverage asserting every enumerated address resolves to a validator, so a field added to the schema later and never made editable fails loudly. Verify `npm test` passes
-- [ ] 1.5 Compose the refusal sentence per kind of field (ISO date, 24-hour time, ISO 4217 code, decimal amount of up to three places, four card digits, free text) in this module alone, and verify the module carries no em dash and no Zod issue text
+The plan wrote eleven editable flat fields and the schema holds ten. `merchant`, `merchantAddress`, `date`, `time`, `currency`, `subtotal`, `tip`, `total`, `paymentMethod` and `cardLast4` are editable; `taxes` and `lineItems` are the two collections, and `isReceipt` and `reason` are not editable. Task 1.3 now reads ten.
+
+- [x] 1.1 Add `lib/field-edit.ts` with an address type covering a flat field, a tax entry cell and a line item entry cell, plus the string form (`total`, `taxes.1.amount`, `lineItems.3.amount`) that the export carries, and verify `tsc --noEmit` passes
+- [x] 1.2 Resolve each address to its validator off `receiptSchema` itself, taking `shape[key]` for a flat field and unwrapping the nullable array to the element shape for a tax or an item cell, with no regex restated in the module. Verify by reading the module and confirming it imports `receiptSchema` and declares no pattern of its own
+- [x] 1.3 Enumerate the editable addresses for a given receipt, leaving out `isReceipt`, `reason`, every `…Confidence`, every `…SourceText` and the computed item total, and verify the list holds the ten flat fields plus two cells per tax entry plus four cells per line item
+- [x] 1.4 Add Vitest coverage asserting every enumerated address resolves to a validator, so a field added to the schema later and never made editable fails loudly. Verify `npm test` passes
+- [x] 1.5 Compose the refusal sentence per kind of field (ISO date, 24-hour time, ISO 4217 code, decimal amount of up to three places, four card digits, free text) in this module alone, and verify the module carries no em dash and no Zod issue text
 
 ## 2. Applying one accepted edit
 
-- [ ] 2.1 Add `applyEdit(receipt, address, text)` returning either a rejection or a new receipt, pure and mutating nothing it was given, and verify a test asserting the input receipt is unchanged after a call
-- [ ] 2.2 Commit an accepted value, set that field's `…Confidence` to null and leave its `…SourceText` exactly as it was, and verify a correction over a field read at 0.62 leaves no confidence and the original source string
-- [ ] 2.3 Commit an emptied field as null rather than as an empty string, and verify a cleared `tip` reads as absent and a cleared `subtotal` makes both checks that need it skip
-- [ ] 2.4 Keep a committed monetary value as the digits the visitor typed, with no rounding, padding, trailing-zero stripping or localizing, and verify "42.00" stays "42.00" and "42.5" stays "42.5"
-- [ ] 2.5 Refuse a value the validator rejects, returning the address, the text the visitor typed and the sentence from 1.5, and verify a malformed date, a money value written with a comma, a money value with four decimal places and a currency of "pounds" are each refused with the receipt untouched
-- [ ] 2.6 Add Vitest coverage over every address kind: a flat text field, `date`, `time`, `currency`, `cardLast4`, a money field, a tax label, a tax amount, and each of the four line item cells. Verify `npm test` passes
+- [x] 2.1 Add `applyEdit(receipt, address, text)` returning either a rejection or a new receipt, pure and mutating nothing it was given, and verify a test asserting the input receipt is unchanged after a call
+- [x] 2.2 Commit an accepted value, set that field's `…Confidence` to null and leave its `…SourceText` exactly as it was, and verify a correction over a field read at 0.62 leaves no confidence and the original source string
+- [x] 2.3 Commit an emptied field as null rather than as an empty string, and verify a cleared `tip` reads as absent and a cleared `subtotal` makes both checks that need it skip
+- [x] 2.4 Keep a committed monetary value as the digits the visitor typed, with no rounding, padding, trailing-zero stripping or localizing, and verify "42.00" stays "42.00" and "42.5" stays "42.5"
+- [x] 2.5 Refuse a value the validator rejects, returning the address, the text the visitor typed and the sentence from 1.5, and verify a malformed date, a money value written with a comma, a money value with four decimal places and a currency of "pounds" are each refused with the receipt untouched
+- [x] 2.6 Add Vitest coverage over every address kind: a flat text field, `date`, `time`, `currency`, `cardLast4`, a money field, a tax label, a tax amount, and each of the four line item cells. Verify `npm test` passes
 
 ## 3. Adding and removing a line item
 
-- [ ] 3.1 Add `addLineItem(receipt)` returning a new receipt whose item list gains an entry with every value null and every confidence null, and verify an added item invents no description and that a receipt whose `lineItems` was empty or null comes back with a one-item list
-- [ ] 3.2 Add `removeLineItem(receipt, index)` returning a new receipt without that entry, and verify removing the only item leaves an empty list rather than a null
-- [ ] 3.3 Remap the recorded edited addresses on a removal so an address above the removed index follows its item, and verify a removal below, at and above a recorded edit, and two recorded edits either side of one removal
-- [ ] 3.4 Add Vitest coverage for the add and the remove against the arithmetic checks: an added item with no amount skips the sum check, an added item carrying the missing 0.50 makes it pass, and removing a duplicated line makes it pass. Verify `npm test` passes
+- [x] 3.1 Add `addLineItem(receipt)` returning a new receipt whose item list gains an entry with every value null and every confidence null, and verify an added item invents no description and that a receipt whose `lineItems` was empty or null comes back with a one-item list
+- [x] 3.2 Add `removeLineItem(receipt, index)` returning a new receipt without that entry, and verify removing the only item leaves an empty list rather than a null
+- [x] 3.3 Remap the recorded edited addresses on a removal so an address above the removed index follows its item, and verify a removal below, at and above a recorded edit, and two recorded edits either side of one removal
+- [x] 3.4 Add Vitest coverage for the add and the remove against the arithmetic checks: an added item with no amount skips the sum check, an added item carrying the missing 0.50 makes it pass, and removing a duplicated line makes it pass. Verify `npm test` passes
 
 ## 4. The editable rows in the field panel
 
