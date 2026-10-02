@@ -55,9 +55,9 @@ Slice 2 of the vertical-slice plan in the repo's `tasks.md`: line items and the 
 ## 7. Verify the slice end to end in the deployed app
 
 - [x] 7.1 Run `npm run lint`, `npm run typecheck` and `npm test`, and verify all three pass with no warning introduced by this slice
-- [ ] 7.2 Push `main` and verify the Vercel production build succeeds with no type or lint error
-- [ ] 7.3 On the production URL, extract a JPEG grocery receipt with several line items, and verify the panel lists every item under the flat fields with its quantity, unit price and amount, and that the computed item total matches the printed subtotal with no warning
-- [ ] 7.4 On the production URL, extract a receipt whose line items do not sum to its printed subtotal, and verify the warning appears on the item total row and on the `subtotal` row naming the difference, and that neither number changed
-- [ ] 7.5 On the production URL, extract a restaurant receipt with a tip and two tax lines, and verify the total check passes or warns on both `subtotal` and `total` naming the difference, matching what the printed receipt says
-- [ ] 7.6 On the production URL, download the JSON for the warned receipt and verify the file carries the line items, the warning with its difference as a decimal string, and every amount unaltered
-- [ ] 7.7 On the production URL, extract an upload that itemizes nothing, and verify the panel says it read no line items, reports no warning about them, and still runs the total check
+- [x] 7.2 Push `main` and verify the Vercel production build succeeds with no type or lint error
+- [x] 7.3 On the production URL, extract a JPEG grocery receipt with several line items, and verify the panel lists every item under the flat fields with its quantity, unit price and amount, and that the computed item total matches the printed subtotal with no warning
+- [x] 7.4 On the production URL, extract a receipt whose line items do not sum to its printed subtotal, and verify the warning appears on the item total row and on the `subtotal` row naming the difference, and that neither number changed
+- [x] 7.5 On the production URL, extract a restaurant receipt with a tip and two tax lines, and verify the total check passes or warns on both `subtotal` and `total` naming the difference, matching what the printed receipt says
+- [x] 7.6 On the production URL, download the JSON for the warned receipt and verify the file carries the line items, the warning with its difference as a decimal string, and every amount unaltered
+- [x] 7.7 On the production URL, extract an upload that itemizes nothing, and verify the panel says it read no line items, reports no warning about them, and still runs the total check
