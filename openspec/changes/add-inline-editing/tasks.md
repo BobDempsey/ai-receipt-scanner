@@ -65,13 +65,13 @@ The plan wrote eleven editable flat fields and the schema holds ten. `merchant`,
 
 - [x] 8.1 Run `npm run lint`, `npm run typecheck` and `npm test`, and verify all three pass with no warning introduced by this slice
 - [x] 8.2 Push `main` and verify the Vercel production build succeeds with no type or lint error
-- [ ] 8.3 On the production URL, extract a JPEG receipt, correct `merchant` and commit with Enter, and verify the panel shows the corrected value, marks it as one you typed, shows no confidence against it and refuses nothing
-- [ ] 8.4 On the production URL, type "02/10/2026" into `date` and commit, and verify the panel refuses it, names what the field takes, keeps the previous value, and leaves every warning as it was
-- [ ] 8.5 On the production URL, extract a receipt whose items do not sum to its printed subtotal, correct the misread item amount, and verify the warning clears from both rows with no page reload
-- [ ] 8.6 On the production URL, edit `total` to a value its parts do not reach, and verify the warning appears on `total` and on `subtotal` naming the new difference
-- [ ] 8.7 On the production URL, add a line item, verify the panel says the sum check is skipped while its amount is absent, then type the missing amount and verify the sum check passes and the warning clears
-- [ ] 8.8 On the production URL, remove a line item and verify the row leaves, the computed item total follows the remaining items, and the warnings follow from what is left
-- [ ] 8.9 On the production URL, clear `tip` and commit, and verify the panel reads it as absent and the total check skips rather than naming a difference
-- [ ] 8.10 On the production URL, download the JSON after several corrections and verify the file carries the edited values, the recomputed warnings, the `edited` list naming each corrected field, a null confidence on each of them, and every original `sourceText` intact
-- [ ] 8.11 On the production URL, correct a field and reload, and verify the workspace comes back empty with no receipt and no edits, which is the lifetime this slice records
-- [ ] 8.12 On the production URL, reach every control in the panel with the keyboard alone, including add and remove, and verify each takes focus with a visible ring and commits with Enter
+- [x] 8.3 On the production URL, extract a JPEG receipt, correct `merchant` and commit with Enter, and verify the panel shows the corrected value, marks it as one you typed, shows no confidence against it and refuses nothing
+- [x] 8.4 On the production URL, type "02/10/2026" into `date` and commit, and verify the panel refuses it, names what the field takes, keeps the previous value, and leaves every warning as it was
+- [x] 8.5 On the production URL, extract a receipt whose items do not sum to its printed subtotal, correct the misread item amount, and verify the warning clears from both rows with no page reload
+- [x] 8.6 On the production URL, edit `total` to a value its parts do not reach, and verify the warning appears on `total` and on `subtotal` naming the new difference
+- [x] 8.7 On the production URL, add a line item, verify the panel says the sum check is skipped while its amount is absent, then type the missing amount and verify the sum check passes and the warning clears
+- [x] 8.8 On the production URL, remove a line item and verify the row leaves, the computed item total follows the remaining items, and the warnings follow from what is left
+- [x] 8.9 On the production URL, clear `tip` and commit, and verify the panel reads it as absent and the total check skips rather than naming a difference
+- [x] 8.10 On the production URL, download the JSON after several corrections and verify the file carries the edited values, the recomputed warnings, the `edited` list naming each corrected field, a null confidence on each of them, and every original `sourceText` intact
+- [x] 8.11 On the production URL, correct a field and reload, and verify the workspace comes back empty with no receipt and no edits, which is the lifetime this slice records
+- [x] 8.12 On the production URL, reach every control in the panel with the keyboard alone, including add and remove, and verify each takes focus with a visible ring and commits with Enter
