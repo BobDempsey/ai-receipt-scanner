@@ -39,7 +39,7 @@ One flat object per receipt, plus a line-item array:
 | `total` | decimal | |
 | `paymentMethod` | string or null | `visa`, `cash`, `amex`, and so on. |
 | `cardLast4` | string or null | |
-| `lineItems` | array | Each with `description`, `quantity`, `unitPrice`, `amount`. |
+| `lineItems` | array | Each with `description`, `quantity`, `unitPrice`, `amount`. `quantity` is a decimal string as well, so a weighed item keeps its `0.734`. |
 
 Money is a decimal string, never a float, and it is parsed with Zod on the way out of the model.
 

@@ -48,9 +48,9 @@ Slice 2 of the vertical-slice plan in the repo's `tasks.md`: line items and the 
 
 ## 6. Fold the decisions back into the documents
 
-- [ ] 6.1 Record in `handoff.md` the decimal decision and why `lib/decimal.ts` is hand-rolled over scaled `BigInt` rather than a library, the three answered open points (exact comparison with no tolerance, an empty `lineItems` is not a flag, the JSON export carries the warnings), and the new download envelope that slice 6 inherits. Verify the file carries no em dash and no AI attribution
-- [ ] 6.2 Tick slice 2 in the repo's `tasks.md`, and verify the other nine entries are untouched
-- [ ] 6.3 Confirm `ai-receipt-scanner-spec.md` needs no correction for this slice by reading its sections 3 and 4 against the delta specs, and report any disagreement rather than leaving the delta to carry a fix alone
+- [x] 6.1 Record in `handoff.md` the decimal decision and why `lib/decimal.ts` is hand-rolled over scaled `BigInt` rather than a library, the three answered open points (exact comparison with no tolerance, an empty `lineItems` is not a flag, the JSON export carries the warnings), and the new download envelope that slice 6 inherits. Verify the file carries no em dash and no AI attribution
+- [x] 6.2 Tick slice 2 in the repo's `tasks.md`, and verify the other nine entries are untouched
+- [x] 6.3 Confirm `ai-receipt-scanner-spec.md` needs no correction for this slice by reading its sections 3 and 4 against the delta specs, and report any disagreement rather than leaving the delta to carry a fix alone
 
 ## 7. Verify the slice end to end in the deployed app
 
