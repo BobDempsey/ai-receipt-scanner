@@ -11,10 +11,10 @@ Slice 2 of the vertical-slice plan in the repo's `tasks.md`: line items and the 
 
 ## 2. Line items in both schemas
 
-- [ ] 2.1 Add `lineItems` to `buildReceiptSchema` in `lib/receipt-schema.ts` as a nullable array whose entries hold `description`, `quantity`, `unitPrice` and `amount`, each with its flat `…Confidence` and `…SourceText` siblings, using `.nullable()` and never `.optional()`, and verify `tsc --noEmit` passes
-- [ ] 2.2 Type `quantity`, `unitPrice` and `amount` as strings on `DECIMAL_PATTERN` in the validating schema and as plain strings in the model-facing schema, and verify the schema accepts `quantity` "0.734" and "2" and rejects the number 2
-- [ ] 2.3 Extend `lib/receipt-schema.test.ts` with a receipt carrying six items, an item whose `quantity` is null, an item whose `amount` is null, an empty `lineItems` array, a null `lineItems`, and an item confidence outside 0 to 1. Verify `npm test` passes
-- [ ] 2.4 Add the line-item wording to `EXTRACTION_PROMPT` in `lib/model.ts`, asking for one entry per purchased line in printed order, the quantity as printed and null when absent, and no entry invented for a receipt that itemizes nothing. Verify the prompt string carries no em dash
+- [x] 2.1 Add `lineItems` to `buildReceiptSchema` in `lib/receipt-schema.ts` as a nullable array whose entries hold `description`, `quantity`, `unitPrice` and `amount`, each with its flat `…Confidence` and `…SourceText` siblings, using `.nullable()` and never `.optional()`, and verify `tsc --noEmit` passes
+- [x] 2.2 Type `quantity`, `unitPrice` and `amount` as strings on `DECIMAL_PATTERN` in the validating schema and as plain strings in the model-facing schema, and verify the schema accepts `quantity` "0.734" and "2" and rejects the number 2
+- [x] 2.3 Extend `lib/receipt-schema.test.ts` with a receipt carrying six items, an item whose `quantity` is null, an item whose `amount` is null, an empty `lineItems` array, a null `lineItems`, and an item confidence outside 0 to 1. Verify `npm test` passes
+- [x] 2.4 Add the line-item wording to `EXTRACTION_PROMPT` in `lib/model.ts`, asking for one entry per purchased line in printed order, the quantity as printed and null when absent, and no entry invented for a receipt that itemizes nothing. Verify the prompt string carries no em dash
 
 ## 3. The two checks and their warnings
 

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * The slice 1 field set, shared between the server route and the browser.
+ * The extracted field set, shared between the server route and the browser.
  *
  * Two rules shape every line below.
  *
@@ -113,6 +113,36 @@ function buildReceiptSchema({ patterns }: BuildOptions) {
     cardLast4: shaped(CARD_LAST4_PATTERN),
     cardLast4Confidence: confidence(),
     cardLast4SourceText: sourceText(),
+
+    /**
+     * One entry per purchased line, in the order the receipt printed them.
+     *
+     * Nullable rather than optional, the way `taxes` already is, because strict
+     * Structured Outputs puts every property in `required`. Null and an empty
+     * array both mean the app read no items, and the arithmetic checker treats
+     * the two the same.
+     *
+     * `quantity` is a decimal string on the same pattern as an amount, so a
+     * weighed item's "0.734" survives as the receipt printed it.
+     */
+    lineItems: z
+      .array(
+        z.object({
+          description: text(),
+          descriptionConfidence: confidence(),
+          descriptionSourceText: sourceText(),
+          quantity: money(),
+          quantityConfidence: confidence(),
+          quantitySourceText: sourceText(),
+          unitPrice: money(),
+          unitPriceConfidence: confidence(),
+          unitPriceSourceText: sourceText(),
+          amount: money(),
+          amountConfidence: confidence(),
+          amountSourceText: sourceText(),
+        }),
+      )
+      .nullable(),
   });
 }
 
@@ -124,6 +154,9 @@ export const modelReceiptSchema = buildReceiptSchema({ patterns: false });
 
 export type Receipt = z.infer<typeof receiptSchema>;
 export type ReceiptTax = Receipt["taxes"] extends (infer Entry)[] | null
+  ? Entry
+  : never;
+export type ReceiptLineItem = Receipt["lineItems"] extends (infer Entry)[] | null
   ? Entry
   : never;
 

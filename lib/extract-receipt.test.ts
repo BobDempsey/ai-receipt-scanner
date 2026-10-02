@@ -20,6 +20,7 @@ function answer(overrides: Partial<Receipt> = {}): Receipt {
     cardLast4: null,
     cardLast4Confidence: null,
     cardLast4SourceText: null,
+    lineItems: null,
   };
 
   return {

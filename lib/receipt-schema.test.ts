@@ -1,5 +1,46 @@
 import { describe, expect, it } from "vitest";
-import { receiptSchema, type Receipt } from "./receipt-schema";
+import {
+  modelReceiptSchema,
+  receiptSchema,
+  type Receipt,
+  type ReceiptLineItem,
+} from "./receipt-schema";
+
+/** One purchased line, with every sibling filled in. */
+function lineItem(overrides: Partial<ReceiptLineItem> = {}): ReceiptLineItem {
+  return {
+    description: "Oat milk",
+    descriptionConfidence: 0.94,
+    descriptionSourceText: "OAT MILK 1L",
+    quantity: "1",
+    quantityConfidence: 0.9,
+    quantitySourceText: "1",
+    unitPrice: "4.99",
+    unitPriceConfidence: 0.91,
+    unitPriceSourceText: "4.99",
+    amount: "4.99",
+    amountConfidence: 0.93,
+    amountSourceText: "4.99",
+    ...overrides,
+  };
+}
+
+/** Six purchased lines summing to the 38.40 the base receipt prints as its subtotal. */
+function sixItems(): ReceiptLineItem[] {
+  return [
+    lineItem(),
+    lineItem({ description: "Coffee beans", unitPrice: "12.50", amount: "12.50" }),
+    lineItem({ description: "Sourdough", unitPrice: "3.25", amount: "3.25" }),
+    lineItem({
+      description: "Bananas",
+      quantity: "0.734",
+      unitPrice: "2.54",
+      amount: "1.86",
+    }),
+    lineItem({ description: "Cheddar", quantity: "2", unitPrice: "4.90", amount: "9.80" }),
+    lineItem({ description: "Olive oil", unitPrice: "6.00", amount: "6.00" }),
+  ];
+}
 
 /** A receipt with every field printed, used as the base each test varies from. */
 function fullReceipt(): Receipt {
@@ -57,6 +98,8 @@ function fullReceipt(): Receipt {
     cardLast4: "4417",
     cardLast4Confidence: 0.86,
     cardLast4SourceText: "XXXX 4417",
+
+    lineItems: sixItems(),
   };
 }
 
@@ -101,6 +144,7 @@ describe("receiptSchema", () => {
       cardLast4: null,
       cardLast4Confidence: null,
       cardLast4SourceText: null,
+      lineItems: null,
     };
 
     expect(receiptSchema.parse(sparse).total).toBeNull();
@@ -171,5 +215,91 @@ describe("receiptSchema", () => {
     const withoutTotal: Record<string, unknown> = { ...fullReceipt() };
     delete withoutTotal.total;
     expect(receiptSchema.safeParse(withoutTotal).success).toBe(false);
+  });
+});
+
+describe("receiptSchema line items", () => {
+  it("accepts a grocery receipt carrying six items in printed order", () => {
+    const parsed = receiptSchema.parse(fullReceipt());
+    expect(parsed.lineItems).toHaveLength(6);
+    expect(parsed.lineItems?.map((item) => item.description)).toEqual([
+      "Oat milk",
+      "Coffee beans",
+      "Sourdough",
+      "Bananas",
+      "Cheddar",
+      "Olive oil",
+    ]);
+  });
+
+  it("keeps a weighed quantity as the decimal string the receipt printed", () => {
+    const parsed = receiptSchema.parse(fullReceipt());
+    expect(parsed.lineItems?.[3].quantity).toBe("0.734");
+  });
+
+  it("keeps a count as a string rather than a number", () => {
+    const parsed = receiptSchema.parse(fullReceipt());
+    expect(parsed.lineItems?.[4].quantity).toBe("2");
+  });
+
+  it("rejects a quantity sent as a JSON number", () => {
+    const items = sixItems();
+    items[4] = lineItem({ quantity: 2 as unknown as string });
+    expect(receiptSchema.safeParse({ ...fullReceipt(), lineItems: items }).success).toBe(false);
+  });
+
+  it("rejects a quantity that is not a decimal string", () => {
+    const items = [lineItem({ quantity: "2 x" })];
+    expect(receiptSchema.safeParse({ ...fullReceipt(), lineItems: items }).success).toBe(false);
+  });
+
+  it("accepts an item whose quantity the receipt did not print", () => {
+    const items = [lineItem({ quantity: null, quantityConfidence: null, quantitySourceText: null })];
+    const parsed = receiptSchema.parse({ ...fullReceipt(), lineItems: items });
+    expect(parsed.lineItems?.[0].quantity).toBeNull();
+  });
+
+  it("accepts an item whose amount the model could not read", () => {
+    const items = [lineItem({ amount: null, amountConfidence: null, amountSourceText: null })];
+    const parsed = receiptSchema.parse({ ...fullReceipt(), lineItems: items });
+    expect(parsed.lineItems?.[0].amount).toBeNull();
+  });
+
+  it("accepts an empty lineItems array", () => {
+    const parsed = receiptSchema.parse({ ...fullReceipt(), lineItems: [] });
+    expect(parsed.lineItems).toEqual([]);
+  });
+
+  it("accepts a null lineItems", () => {
+    const parsed = receiptSchema.parse({ ...fullReceipt(), lineItems: null });
+    expect(parsed.lineItems).toBeNull();
+  });
+
+  it("rejects an item confidence outside 0 to 1", () => {
+    const tooSure = [lineItem({ amountConfidence: 1.2 })];
+    expect(receiptSchema.safeParse({ ...fullReceipt(), lineItems: tooSure }).success).toBe(false);
+
+    const negative = [lineItem({ amountConfidence: -0.1 })];
+    expect(receiptSchema.safeParse({ ...fullReceipt(), lineItems: negative }).success).toBe(false);
+  });
+
+  it("rejects an item missing one of its keys", () => {
+    const item: Record<string, unknown> = { ...lineItem() };
+    delete item.unitPrice;
+    expect(receiptSchema.safeParse({ ...fullReceipt(), lineItems: [item] }).success).toBe(false);
+  });
+});
+
+describe("modelReceiptSchema line items", () => {
+  it("takes a quantity as a plain string, with the pattern left to the validating schema", () => {
+    const items = [lineItem({ quantity: "2 x" })];
+    expect(modelReceiptSchema.safeParse({ ...fullReceipt(), lineItems: items }).success).toBe(true);
+  });
+
+  it("still refuses a quantity sent as a number", () => {
+    const items = [lineItem({ quantity: 2 as unknown as string })];
+    expect(modelReceiptSchema.safeParse({ ...fullReceipt(), lineItems: items }).success).toBe(
+      false,
+    );
   });
 });

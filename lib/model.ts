@@ -23,5 +23,8 @@ export const EXTRACTION_PROMPT = [
   "Set each field's confidence to how sure you are of that value, and each sourceText to the characters you read the value from.",
   "Infer currency from the printed symbol and the address. Leave it null when neither settles it, rather than guessing USD.",
   "Give date as the printed calendar date in ISO form, with no timezone applied, and time on a 24-hour clock.",
+  "Fill lineItems with one entry per purchased line the receipt prints, in the printed order, each carrying its description, quantity, unit price and amount.",
+  "Give each quantity as printed, so a weighed item reads \"0.734\" and a count of two reads \"2\", and leave quantity null when the line prints none rather than defaulting it to 1.",
+  "Leave lineItems empty when the receipt itemizes nothing, such as a card slip printing a total alone, and never invent an entry to fill it.",
   "Set isReceipt to false with a short reason when the image is something other than a receipt, and leave every field null.",
 ].join(" ");

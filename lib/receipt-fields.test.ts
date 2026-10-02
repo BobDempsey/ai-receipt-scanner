@@ -1,7 +1,47 @@
 import { describe, expect, it } from "vitest";
 import { fieldRows, isAbsent, needsReview } from "./receipt-fields";
 import { receiptToJson } from "./receipt-json";
-import { receiptSchema, type Receipt } from "./receipt-schema";
+import {
+  receiptSchema,
+  type Receipt,
+  type ReceiptLineItem,
+} from "./receipt-schema";
+
+/** One purchased line, with every sibling filled in. */
+export function lineItem(overrides: Partial<ReceiptLineItem> = {}): ReceiptLineItem {
+  return {
+    description: "Oat milk",
+    descriptionConfidence: 0.94,
+    descriptionSourceText: "OAT MILK 1L",
+    quantity: "1",
+    quantityConfidence: 0.9,
+    quantitySourceText: "1",
+    unitPrice: "4.99",
+    unitPriceConfidence: 0.91,
+    unitPriceSourceText: "4.99",
+    amount: "4.99",
+    amountConfidence: 0.93,
+    amountSourceText: "4.99",
+    ...overrides,
+  };
+}
+
+/** Six purchased lines summing to the 38.40 the base receipt prints as its subtotal. */
+function sixItems(): ReceiptLineItem[] {
+  return [
+    lineItem(),
+    lineItem({ description: "Coffee beans", unitPrice: "12.50", amount: "12.50" }),
+    lineItem({ description: "Sourdough", unitPrice: "3.25", amount: "3.25" }),
+    lineItem({
+      description: "Bananas",
+      quantity: "0.734",
+      unitPrice: "2.54",
+      amount: "1.86",
+    }),
+    lineItem({ description: "Cheddar", quantity: "2", unitPrice: "4.90", amount: "9.80" }),
+    lineItem({ description: "Olive oil", unitPrice: "6.00", amount: "6.00" }),
+  ];
+}
 
 function receipt(overrides: Partial<Receipt> = {}): Receipt {
   const base: Receipt = {
@@ -47,6 +87,7 @@ function receipt(overrides: Partial<Receipt> = {}): Receipt {
     cardLast4: "4417",
     cardLast4Confidence: 0.86,
     cardLast4SourceText: "XXXX 4417",
+    lineItems: sixItems(),
   };
 
   return { ...base, ...overrides };
