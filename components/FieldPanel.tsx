@@ -26,6 +26,7 @@ import {
   type LineItemRow,
 } from "@/lib/receipt-fields";
 import type { Receipt } from "@/lib/receipt-schema";
+import classes from "./FieldPanel.module.css";
 
 /**
  * Commits one edit and says whether the app took it.
@@ -103,6 +104,7 @@ function EditableCell({
     <TextInput
       aria-label={name}
       value={draft}
+      classNames={{ input: classes.cellInput }}
       error={rejection}
       placeholder="absent"
       size="xs"

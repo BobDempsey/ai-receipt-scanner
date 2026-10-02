@@ -64,7 +64,7 @@ The plan wrote eleven editable flat fields and the schema holds ten. `merchant`,
 ## 8. Verify the slice end to end in the deployed app
 
 - [x] 8.1 Run `npm run lint`, `npm run typecheck` and `npm test`, and verify all three pass with no warning introduced by this slice
-- [ ] 8.2 Push `main` and verify the Vercel production build succeeds with no type or lint error
+- [x] 8.2 Push `main` and verify the Vercel production build succeeds with no type or lint error
 - [ ] 8.3 On the production URL, extract a JPEG receipt, correct `merchant` and commit with Enter, and verify the panel shows the corrected value, marks it as one you typed, shows no confidence against it and refuses nothing
 - [ ] 8.4 On the production URL, type "02/10/2026" into `date` and commit, and verify the panel refuses it, names what the field takes, keeps the previous value, and leaves every warning as it was
 - [ ] 8.5 On the production URL, extract a receipt whose items do not sum to its printed subtotal, correct the misread item amount, and verify the warning clears from both rows with no page reload

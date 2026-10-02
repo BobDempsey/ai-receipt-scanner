@@ -1,0 +1,9 @@
+/* A filled Mantine input marks focus with a border colour alone, which is a one
+   pixel change the eye can miss in a table of thirty controls. The panel's cells
+   take the same two pixel ring the buttons already draw, so a visitor moving
+   through the fields by keyboard can see where they are. */
+
+.cellInput:focus-visible {
+  outline: rem(2px) solid var(--mantine-primary-color-filled);
+  outline-offset: rem(1px);
+}
