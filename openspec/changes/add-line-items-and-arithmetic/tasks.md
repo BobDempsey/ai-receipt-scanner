@@ -4,10 +4,10 @@ Slice 2 of the vertical-slice plan in the repo's `tasks.md`: line items and the 
 
 ## 1. Decimal arithmetic over the strings
 
-- [ ] 1.1 Add `lib/decimal.ts` parsing a decimal string into a sign, a `BigInt` of its digits and a scale, with add, subtract, compare and render functions that lift both operands to the wider scale first, and verify `tsc --noEmit` passes
-- [ ] 1.2 Render a result at the common scale of its operands, and verify a difference between two-place amounts renders as "0.50" rather than "0.5"
-- [ ] 1.3 Add Vitest coverage for `lib/decimal.ts`: "0.10" plus "0.20" plus "0.30" equals "0.60", "0.07" plus "0.01" equals "0.08", "47.6" compares equal to "47.60", a third decimal place against two places, a negative difference, a zero difference, and a malformed string rejected rather than coerced. Verify `npm test` passes
-- [ ] 1.4 Confirm no function in the module converts a value to `Number` at any point, by reading the module and verifying the tests in 1.3 cover the sums a float gets wrong
+- [x] 1.1 Add `lib/decimal.ts` parsing a decimal string into a sign, a `BigInt` of its digits and a scale, with add, subtract, compare and render functions that lift both operands to the wider scale first, and verify `tsc --noEmit` passes
+- [x] 1.2 Render a result at the common scale of its operands, and verify a difference between two-place amounts renders as "0.50" rather than "0.5"
+- [x] 1.3 Add Vitest coverage for `lib/decimal.ts`: "0.10" plus "0.20" plus "0.30" equals "0.60", "0.07" plus "0.01" equals "0.08", "47.6" compares equal to "47.60", a third decimal place against two places, a negative difference, a zero difference, and a malformed string rejected rather than coerced. Verify `npm test` passes
+- [x] 1.4 Confirm no function in the module converts a value to `Number` at any point, by reading the module and verifying the tests in 1.3 cover the sums a float gets wrong
 
 ## 2. Line items in both schemas
 
