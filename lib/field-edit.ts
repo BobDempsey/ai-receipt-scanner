@@ -351,25 +351,39 @@ export function removeLineItem(receipt: Receipt, index: number, edited: EditedFi
   };
 }
 
+/**
+ * One address string after an item leaves the list.
+ *
+ * An address on the removed item returns null, because the value it named has
+ * gone. An address above it drops one place, so it follows the item it belongs
+ * to rather than describing the line that took its index. Anything else comes
+ * back unchanged.
+ */
+export function remapAddressOnRemove(key: string, index: number): string | null {
+  const parts = key.split(".");
+
+  if (parts.length !== 3 || parts[0] !== "lineItems") {
+    return key;
+  }
+
+  const position = Number(parts[1]);
+
+  if (position === index) {
+    return null;
+  }
+
+  return position > index ? `lineItems.${position - 1}.${parts[2]}` : key;
+}
+
 /** The edited list after one item leaves: its own addresses go, the ones above it shift down. */
 export function remapEditedOnRemove(edited: EditedFields, index: number): EditedFields {
   const remapped: string[] = [];
 
   for (const key of edited) {
-    const parts = key.split(".");
-
-    if (parts.length !== 3 || parts[0] !== "lineItems") {
-      remapped.push(key);
-      continue;
+    const next = remapAddressOnRemove(key, index);
+    if (next !== null) {
+      remapped.push(next);
     }
-
-    const position = Number(parts[1]);
-
-    if (position === index) {
-      continue;
-    }
-
-    remapped.push(position > index ? `lineItems.${position - 1}.${parts[2]}` : key);
   }
 
   return remapped;

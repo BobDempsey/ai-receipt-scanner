@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { arithmeticWarnings } from "./arithmetic";
 import {
+  addLineItem,
+  addressKey,
+  applyEdit,
+  recordEdited,
+} from "./field-edit";
+import {
   fieldRows,
   isAbsent,
+  isVisitorTyped,
   itemNeedsReview,
   lineItemRows,
   needsReview,
@@ -107,6 +114,13 @@ function row(rows: ReturnType<typeof fieldRows>, label: string) {
     throw new Error(`no row labelled ${label}`);
   }
   return found;
+}
+
+function accepted(result: ReturnType<typeof applyEdit>): Receipt {
+  if (!result.accepted) {
+    throw new Error(`the app refused the edit: ${result.rejection.message}`);
+  }
+  return result.receipt;
 }
 
 describe("fieldRows", () => {
@@ -287,10 +301,95 @@ describe("a warning reaches both rows it names", () => {
   });
 });
 
+describe("the rows carry the address a control writes to", () => {
+  it("gives every editable flat row its address", () => {
+    const rows = fieldRows(receipt());
+
+    expect(addressKey(row(rows, "Merchant").address!)).toBe("merchant");
+    expect(addressKey(row(rows, "Date").address!)).toBe("date");
+    expect(addressKey(row(rows, "Subtotal").address!)).toBe("subtotal");
+    expect(addressKey(row(rows, "Total").address!)).toBe("total");
+    expect(addressKey(row(rows, "Card last 4").address!)).toBe("cardLast4");
+  });
+
+  it("gives a tax row the amount address and a second control for the label", () => {
+    const taxes = row(fieldRows(receipt()), "Tax: VAT 20%");
+
+    expect(addressKey(taxes.address!)).toBe("taxes.0.amount");
+    expect(addressKey(taxes.labelCell!.address!)).toBe("taxes.0.label");
+    expect(taxes.labelCell!.value).toBe("VAT 20%");
+  });
+
+  it("gives the computed item total no address at all", () => {
+    const items = row(fieldRows(receipt()), "Line item total");
+
+    expect(items.address).toBeUndefined();
+    expect(items.computed).toBe(true);
+  });
+
+  it("gives each of an item's four cells its own address", () => {
+    const rows = lineItemRows(receipt());
+
+    expect(rows[3].index).toBe(3);
+    expect(addressKey(rows[3].description.address!)).toBe("lineItems.3.description");
+    expect(addressKey(rows[3].quantity.address!)).toBe("lineItems.3.quantity");
+    expect(addressKey(rows[3].unitPrice.address!)).toBe("lineItems.3.unitPrice");
+    expect(addressKey(rows[3].amount.address!)).toBe("lineItems.3.amount");
+  });
+});
+
+describe("the rows tell a typed value from a read one", () => {
+  it("marks a row named by the edited list and leaves the rest alone", () => {
+    const rows = fieldRows(receipt(), ["total"]);
+
+    expect(isVisitorTyped(row(rows, "Total"))).toBe(true);
+    expect(isVisitorTyped(row(rows, "Subtotal"))).toBe(false);
+  });
+
+  it("marks the row off the edited list rather than off a null confidence", () => {
+    const rows = fieldRows(receipt({ totalConfidence: null }), []);
+
+    expect(isVisitorTyped(row(rows, "Total"))).toBe(false);
+    expect(needsReview(row(rows, "Total"))).toBe(false);
+  });
+
+  it("drops the review flag once the visitor has corrected the flagged field", () => {
+    const corrected = receipt({
+      taxes: [
+        {
+          label: "VAT 20%",
+          labelConfidence: 0.9,
+          labelSourceText: "VAT 20%",
+          amount: "3.60",
+          amountConfidence: null,
+          amountSourceText: "3.60",
+        },
+      ],
+    });
+    const taxRow = row(fieldRows(corrected, ["taxes.0.amount"]), "Tax: VAT 20%");
+
+    expect(needsReview(taxRow)).toBe(false);
+    expect(isVisitorTyped(taxRow)).toBe(true);
+    expect(taxRow.confidence).toBeNull();
+  });
+
+  it("marks one item cell without marking the other three", () => {
+    const rows = lineItemRows(receipt(), ["lineItems.2.amount"]);
+
+    expect(isVisitorTyped(rows[2].amount)).toBe(true);
+    expect(isVisitorTyped(rows[2].quantity)).toBe(false);
+    expect(isVisitorTyped(rows[1].amount)).toBe(false);
+  });
+
+  it("marks nothing when the visitor has edited nothing", () => {
+    expect(fieldRows(receipt()).some(isVisitorTyped)).toBe(false);
+  });
+});
+
 describe("receiptToJson", () => {
-  it("writes the receipt and the warnings as two keys of one envelope", () => {
+  it("writes the receipt, the warnings and the edited fields as three keys", () => {
     const parsed = JSON.parse(receiptToJson(receipt(), []));
-    expect(Object.keys(parsed)).toEqual(["receipt", "warnings"]);
+    expect(Object.keys(parsed)).toEqual(["receipt", "warnings", "edited"]);
     expect(parsed.receipt.merchant).toBe("Pier Cafe");
   });
 
@@ -352,5 +451,109 @@ describe("receiptToJson", () => {
     expect(parsed.receipt.subtotal).toBe("47.60");
     expect(parsed.receipt.lineItems[0].amount).toBe("48.10");
     expect(receiptSchema.safeParse(parsed.receipt).success).toBe(true);
+  });
+});
+
+describe("the envelope names the fields the visitor edited", () => {
+  it("names both corrected fields and no other", () => {
+    const corrected = accepted(
+      applyEdit(
+        accepted(applyEdit(receipt(), { kind: "flat", field: "date" }, "2026-09-19")),
+        { kind: "item", index: 2, cell: "amount" },
+        "3.30",
+      ),
+    );
+    const edited = recordEdited(
+      recordEdited([], { kind: "flat", field: "date" }),
+      { kind: "item", index: 2, cell: "amount" },
+    );
+    const parsed = JSON.parse(receiptToJson(corrected, arithmeticWarnings(corrected), edited));
+
+    expect(parsed.edited).toEqual(["date", "lineItems.2.amount"]);
+    expect(parsed.receipt.date).toBe("2026-09-19");
+    expect(parsed.receipt.lineItems[2].amount).toBe("3.30");
+  });
+
+  it("writes the edited key as an empty list rather than omitting it", () => {
+    const file = receiptToJson(receipt(), []);
+
+    expect(file).toContain('"edited": []');
+    expect(JSON.parse(file).edited).toEqual([]);
+  });
+
+  it("carries a corrected total with a null confidence and the original source text", () => {
+    const corrected = accepted(applyEdit(receipt(), { kind: "flat", field: "total" }, "42.50"));
+    const edited = recordEdited([], { kind: "flat", field: "total" });
+    const parsed = JSON.parse(receiptToJson(corrected, arithmeticWarnings(corrected), edited));
+
+    expect(parsed.receipt.total).toBe("42.50");
+    expect(parsed.receipt.totalConfidence).toBeNull();
+    expect(parsed.receipt.totalSourceText).toBe("TOTAL 42.00");
+    expect(parsed.edited).toEqual(["total"]);
+    expect(receiptSchema.safeParse(parsed.receipt).success).toBe(true);
+  });
+
+  it("carries an added line item with the values the visitor typed", () => {
+    const change = addLineItem(receipt(), []);
+    const described = accepted(
+      applyEdit(change.receipt, { kind: "item", index: 6, cell: "description" }, "Rye loaf"),
+    );
+    const filled = accepted(
+      applyEdit(described, { kind: "item", index: 6, cell: "amount" }, "2.40"),
+    );
+    const edited = recordEdited(
+      recordEdited(change.edited, { kind: "item", index: 6, cell: "description" }),
+      { kind: "item", index: 6, cell: "amount" },
+    );
+    const parsed = JSON.parse(receiptToJson(filled, arithmeticWarnings(filled), edited));
+
+    expect(parsed.receipt.lineItems).toHaveLength(7);
+    expect(parsed.receipt.lineItems[6].description).toBe("Rye loaf");
+    expect(parsed.receipt.lineItems[6].amount).toBe("2.40");
+    expect(parsed.receipt.lineItems[6].amountConfidence).toBeNull();
+    expect(parsed.receipt.lineItems[6].amountSourceText).toBeNull();
+    expect(parsed.edited).toEqual(["lineItems.6.description", "lineItems.6.amount"]);
+  });
+
+  it("drops a warning the correction cleared", () => {
+    const short = receipt({ subtotal: "38.90" });
+    expect(arithmeticWarnings(short)).toHaveLength(2);
+
+    const corrected = accepted(applyEdit(short, { kind: "flat", field: "subtotal" }, "38.40"));
+    const parsed = JSON.parse(
+      receiptToJson(corrected, arithmeticWarnings(corrected), ["subtotal"]),
+    );
+
+    expect(parsed.warnings).toEqual([]);
+    expect(parsed.receipt.subtotal).toBe("38.40");
+  });
+
+  it("names the difference the correction left behind", () => {
+    const items = sixItems();
+    items[0] = lineItem({ amount: "4.49" });
+    const short = receipt({ lineItems: items });
+    expect(arithmeticWarnings(short)[0].difference).toBe("0.50");
+
+    const narrowed = accepted(
+      applyEdit(short, { kind: "item", index: 0, cell: "amount" }, "4.89"),
+    );
+    const parsed = JSON.parse(
+      receiptToJson(narrowed, arithmeticWarnings(narrowed), ["lineItems.0.amount"]),
+    );
+
+    expect(parsed.warnings).toHaveLength(1);
+    expect(parsed.warnings[0].difference).toBe("0.10");
+    expect(parsed.edited).toEqual(["lineItems.0.amount"]);
+  });
+
+  it("skips the sum check while an added item carries no amount", () => {
+    const change = addLineItem(receipt(), []);
+    const parsed = JSON.parse(
+      receiptToJson(change.receipt, arithmeticWarnings(change.receipt), change.edited),
+    );
+
+    expect(parsed.receipt.lineItems).toHaveLength(7);
+    expect(parsed.warnings).toEqual([]);
+    expect(parsed.edited).toEqual([]);
   });
 });

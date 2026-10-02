@@ -13,8 +13,17 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import { FieldPanel } from "./FieldPanel";
+import { FieldPanel, type CommitEdit, type Rejections } from "./FieldPanel";
 import { arithmeticWarnings, type ArithmeticWarning } from "@/lib/arithmetic";
+import {
+  addLineItem,
+  addressKey,
+  applyEdit,
+  recordEdited,
+  remapAddressOnRemove,
+  removeLineItem,
+  type EditedFields,
+} from "@/lib/field-edit";
 import { RECEIPT_JSON_FILENAME, receiptToJson } from "@/lib/receipt-json";
 import {
   isExtractionError,
@@ -58,8 +67,34 @@ export function ReceiptWorkspace() {
    * they would otherwise sit inside.
    */
   const [warnings, setWarnings] = useState<ArithmeticWarning[]>([]);
+  /**
+   * Which fields the visitor has typed into, held beside the receipt the way the
+   * warnings are, because the Zod schema governs what sits inside the receipt
+   * object and a marker about this browser tab is not a fact about the receipt.
+   */
+  const [edited, setEdited] = useState<EditedFields>([]);
+  /** The refusal standing against each field that refused a committed edit. */
+  const [rejections, setRejections] = useState<Rejections>({});
+  /**
+   * One key per line item, used as the React key alone.
+   *
+   * Keying an item row off its index hands the removed row's draft text to the
+   * row that took its place. The key never reaches the receipt and never reaches
+   * the download, because it describes this tab rather than the receipt.
+   */
+  const [itemKeys, setItemKeys] = useState<string[]>([]);
   const [failure, setFailure] = useState<ExtractionErrorCode | null>(null);
   const inFlight = useRef(false);
+  const keyCount = useRef(0);
+
+  const freshKeys = useCallback((count: number) => {
+    const keys: string[] = [];
+    for (let made = 0; made < count; made += 1) {
+      keyCount.current += 1;
+      keys.push(`item-${keyCount.current}`);
+    }
+    return keys;
+  }, []);
 
   /**
    * Picking a file replaces the one already chosen rather than queuing a second,
@@ -76,6 +111,9 @@ export function ReceiptWorkspace() {
     setFile(next);
     setReceipt(null);
     setWarnings([]);
+    setEdited([]);
+    setRejections({});
+    setItemKeys([]);
     setFailure(null);
     setPhase("waiting");
   }, []);
@@ -93,6 +131,9 @@ export function ReceiptWorkspace() {
     setPhase("working");
     setReceipt(null);
     setWarnings([]);
+    setEdited([]);
+    setRejections({});
+    setItemKeys([]);
     setFailure(null);
 
     try {
@@ -112,6 +153,7 @@ export function ReceiptWorkspace() {
       // The checks run here, on what the browser already holds. No second request
       // leaves the page to produce a warning.
       setWarnings(body.isReceipt ? arithmeticWarnings(body) : []);
+      setItemKeys(freshKeys((body.lineItems ?? []).length));
       setPhase(body.isReceipt ? "result" : "not-a-receipt");
     } catch {
       setFailure("model_call_failed");
@@ -119,21 +161,108 @@ export function ReceiptWorkspace() {
     } finally {
       inFlight.current = false;
     }
-  }, [file]);
+  }, [file, freshKeys]);
+
+  /**
+   * Takes one committed edit, or refuses it.
+   *
+   * An accepted edit sets the receipt, the edited list and the warnings together
+   * in one pass, so no render shows a receipt beside warnings computed from an
+   * earlier one. A refused edit records the refusal and touches nothing else,
+   * which is what leaves every warning as it was. Both paths compute every
+   * warning from state the browser already holds and send no request.
+   */
+  const commit = useCallback<CommitEdit>(
+    (address, text) => {
+      if (!receipt) {
+        return false;
+      }
+
+      const key = addressKey(address);
+      const result = applyEdit(receipt, address, text);
+
+      if (!result.accepted) {
+        setRejections((standing) => ({
+          ...standing,
+          [key]: `The app did not take "${text}". ${result.rejection.message}`,
+        }));
+        return false;
+      }
+
+      setReceipt(result.receipt);
+      setEdited((recorded) => recordEdited(recorded, address));
+      setWarnings(arithmeticWarnings(result.receipt));
+      setRejections((standing) => {
+        if (!(key in standing)) {
+          return standing;
+        }
+        const next = { ...standing };
+        delete next[key];
+        return next;
+      });
+
+      return true;
+    },
+    [receipt],
+  );
+
+  /** Adds an empty item, then runs the same recheck a committed edit runs. */
+  const addItem = useCallback(() => {
+    if (!receipt) {
+      return;
+    }
+
+    const change = addLineItem(receipt, edited);
+    setReceipt(change.receipt);
+    setEdited(change.edited);
+    setWarnings(arithmeticWarnings(change.receipt));
+    setItemKeys((keys) => [...keys, ...freshKeys(1)]);
+  }, [receipt, edited, freshKeys]);
+
+  /**
+   * Removes one item, follows the recorded edits and the standing refusals
+   * through the index shift, and runs the same recheck.
+   */
+  const removeItem = useCallback(
+    (index: number) => {
+      if (!receipt) {
+        return;
+      }
+
+      const change = removeLineItem(receipt, index, edited);
+      setReceipt(change.receipt);
+      setEdited(change.edited);
+      setWarnings(arithmeticWarnings(change.receipt));
+      setItemKeys((keys) => keys.filter((_, position) => position !== index));
+      setRejections((standing) => {
+        const next: Rejections = {};
+        for (const [key, message] of Object.entries(standing)) {
+          const moved = remapAddressOnRemove(key, index);
+          if (moved !== null) {
+            next[moved] = message;
+          }
+        }
+        return next;
+      });
+    },
+    [receipt, edited],
+  );
 
   const download = useCallback(() => {
     if (!receipt) {
       return;
     }
 
-    const blob = new Blob([receiptToJson(receipt, warnings)], { type: "application/json" });
+    const blob = new Blob([receiptToJson(receipt, warnings, edited)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
     link.download = RECEIPT_JSON_FILENAME;
     link.click();
     URL.revokeObjectURL(url);
-  }, [receipt, warnings]);
+  }, [receipt, warnings, edited]);
 
   return (
     <Container size="xl" py="xl">
@@ -145,8 +274,10 @@ export function ReceiptWorkspace() {
           <Text c="dimmed" maw="65ch">
             Pick a photograph of a receipt. One model call reads it into typed
             fields and its line items, the app checks the answer against its own
-            schema and its own arithmetic, and the JSON download carries what the
-            model gave with the confidence it gave it.
+            schema and its own arithmetic, and you correct any value in place.
+            The app rechecks the arithmetic on every correction, and the JSON
+            download carries the values you have, the warnings and the fields you
+            typed.
           </Text>
         </Stack>
 
@@ -218,12 +349,28 @@ export function ReceiptWorkspace() {
 
             {phase === "result" && receipt ? (
               <Stack gap="md">
-                <FieldPanel receipt={receipt} warnings={warnings} />
-                <Group>
-                  <Button variant="light" onClick={download}>
-                    Download the JSON
-                  </Button>
-                </Group>
+                <FieldPanel
+                  receipt={receipt}
+                  warnings={warnings}
+                  edited={edited}
+                  rejections={rejections}
+                  onCommit={commit}
+                  onAddItem={addItem}
+                  onRemoveItem={removeItem}
+                  itemKeys={itemKeys}
+                />
+                <Stack gap="xs">
+                  <Group>
+                    <Button variant="light" onClick={download}>
+                      Download the JSON
+                    </Button>
+                  </Group>
+                  <Text c="dimmed" size="xs" maw="65ch">
+                    Your corrections live in this browser tab and the app stores
+                    nothing, so a reload loses the receipt and its edits together.
+                    The download is how you keep a corrected receipt.
+                  </Text>
+                </Stack>
               </Stack>
             ) : null}
 
