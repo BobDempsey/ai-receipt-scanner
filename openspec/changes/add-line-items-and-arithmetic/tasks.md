@@ -54,7 +54,7 @@ Slice 2 of the vertical-slice plan in the repo's `tasks.md`: line items and the 
 
 ## 7. Verify the slice end to end in the deployed app
 
-- [ ] 7.1 Run `npm run lint`, `npm run typecheck` and `npm test`, and verify all three pass with no warning introduced by this slice
+- [x] 7.1 Run `npm run lint`, `npm run typecheck` and `npm test`, and verify all three pass with no warning introduced by this slice
 - [ ] 7.2 Push `main` and verify the Vercel production build succeeds with no type or lint error
 - [ ] 7.3 On the production URL, extract a JPEG grocery receipt with several line items, and verify the panel lists every item under the flat fields with its quantity, unit price and amount, and that the computed item total matches the printed subtotal with no warning
 - [ ] 7.4 On the production URL, extract a receipt whose line items do not sum to its printed subtotal, and verify the warning appears on the item total row and on the `subtotal` row naming the difference, and that neither number changed
