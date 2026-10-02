@@ -18,13 +18,13 @@ Slice 2 of the vertical-slice plan in the repo's `tasks.md`: line items and the 
 
 ## 3. The two checks and their warnings
 
-- [ ] 3.1 Add `lib/arithmetic.ts` exporting a pure function from a validated `Receipt` to an array of warnings, built only on `lib/decimal.ts`, and verify it makes no network call and reads nothing outside the object it was given
-- [ ] 3.2 Implement the line-item check summing every item `amount` against `subtotal`, and verify a receipt summing to "47.60" against a `subtotal` of "47.60" produces no warning
-- [ ] 3.3 Implement the total check adding `subtotal`, every `taxes[].amount` and `tip` against `total`, treating a null `tip` and an absent `taxes` array as contributing nothing, and verify a restaurant receipt with a tip and two tax lines that balances produces no warning
-- [ ] 3.4 Give each warning its check, the two field identifiers (`lineItemsTotal`, `subtotal`, `total`), the two compared decimals, the absolute difference as a decimal string at the common scale, and a message the module composed naming the direction. Verify the items-sum mismatch carries the difference "0.50" and names both the item total and `subtotal`
-- [ ] 3.5 Skip a check rather than warn when a value it needs is missing: `subtotal` null, `total` null, any item `amount` null, and `lineItems` empty or null. Verify each case produces no warning and that an empty `lineItems` is not a flag of its own
-- [ ] 3.6 Leave every extracted value untouched, and verify the checker returns warnings only and mutates no field on the receipt it was given
-- [ ] 3.7 Add Vitest coverage for `lib/arithmetic.ts` over every scenario in the arithmetic delta: both checks passing, both failing, a 0.01 rounding difference warned rather than tolerated, differing scales, each skip case, and a card slip with a total and no items. Verify `npm test` passes
+- [x] 3.1 Add `lib/arithmetic.ts` exporting a pure function from a validated `Receipt` to an array of warnings, built only on `lib/decimal.ts`, and verify it makes no network call and reads nothing outside the object it was given
+- [x] 3.2 Implement the line-item check summing every item `amount` against `subtotal`, and verify a receipt summing to "47.60" against a `subtotal` of "47.60" produces no warning
+- [x] 3.3 Implement the total check adding `subtotal`, every `taxes[].amount` and `tip` against `total`, treating a null `tip` and an absent `taxes` array as contributing nothing, and verify a restaurant receipt with a tip and two tax lines that balances produces no warning
+- [x] 3.4 Give each warning its check, the two field identifiers (`lineItemsTotal`, `subtotal`, `total`), the two compared decimals, the absolute difference as a decimal string at the common scale, and a message the module composed naming the direction. Verify the items-sum mismatch carries the difference "0.50" and names both the item total and `subtotal`
+- [x] 3.5 Skip a check rather than warn when a value it needs is missing: `subtotal` null, `total` null, any item `amount` null, and `lineItems` empty or null. Verify each case produces no warning and that an empty `lineItems` is not a flag of its own
+- [x] 3.6 Leave every extracted value untouched, and verify the checker returns warnings only and mutates no field on the receipt it was given
+- [x] 3.7 Add Vitest coverage for `lib/arithmetic.ts` over every scenario in the arithmetic delta: both checks passing, both failing, a 0.01 rounding difference warned rather than tolerated, differing scales, each skip case, and a card slip with a total and no items. Verify `npm test` passes
 
 ## 4. The line items and the warnings on screen
 
