@@ -57,8 +57,8 @@ The app SHALL compare and add monetary values as decimals, never as floating-poi
 
 #### Scenario: A sum a float would get wrong
 
-- **WHEN** the line items read "0.07" and "0.01" and `subtotal` reads "0.08"
-- **THEN** the check passes, because the app adds the decimals rather than two floats whose sum is not 0.08
+- **WHEN** the line items read "0.10", "0.20" and "0.30" and `subtotal` reads "0.60"
+- **THEN** the check passes, because the app adds the decimals rather than three floats whose sum is 0.6000000000000001
 
 ### Requirement: A missing value is not a mismatch
 
