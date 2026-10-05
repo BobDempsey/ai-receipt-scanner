@@ -7,7 +7,7 @@
 - [x] Slice 2: line items and the arithmetic warnings
 - [x] Slice 3: inline editing with recheck on every edit
 - [x] Slice 4: OCR word boxes and click-to-highlight
-- [ ] Slice 5: PDF uploads and the remaining file types
+- [x] Slice 5: PDF uploads and the remaining file types
 - [ ] Slice 6: session table, CSV and batch export
 - [ ] Slice 7: caps, rate limits and the three samples
 - [ ] Slice 8: landing page, chrome, About and README
