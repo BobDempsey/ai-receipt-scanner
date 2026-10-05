@@ -14,7 +14,7 @@ This one runs on OpenAI too, so all four AI projects share a provider. What sepa
 
 They land on the page and see the drop zone in the hero, with three sample receipts sitting under it. They can try the app without finding a file of their own, and without scrolling.
 
-They drop in a photo or a PDF. The image stays on the left at full height and the extracted form fills in on the right as the model reads it. Every field shows a confidence state, and clicking a field highlights the region of the image the value came from.
+They drop in a photo or a PDF. The image stays on the left at full height and the extracted form fills in on the right as the model reads it. Every field shows a confidence state, and reaching a field, by a click or by keyboard focus, marks the region of the image the value came from. One field is marked at a time, so nothing on the image claims two fields were read from the same words.
 
 Fields the app is not sure about are flagged. The visitor fixes them inline, and the app rechecks the arithmetic on every edit.
 
@@ -49,7 +49,13 @@ Money is a decimal string, never a float, and it is parsed with Zod on the way o
 
 **Per-field confidence comes from the model.** Every field in the response schema carries a sibling `confidence` between 0 and 1 and a `sourceText` holding the characters the model read the value from. Anything under 0.8 is flagged for review in the UI.
 
-**Field highlighting is matched, not generated.** The model does not return coordinates, and asking it to would produce numbers that look precise and are not. Instead the app gets word boxes from the document itself, then fuzzy-matches each field's `sourceText` against those words to find the region. A PDF with a text layer gives boxes from pdf.js for free. An image goes through tesseract.js in a web worker on the client, so the OCR pass costs nothing on the server and the file never has to be stored to be measured. When no match clears the threshold, the field shows no highlight rather than a wrong one.
+**Field highlighting is matched, not generated.** The model does not return coordinates, and asking it to would produce numbers that look precise and are not. Instead the app gets word boxes from the document itself, then fuzzy-matches each field's `sourceText` against those words to find the region. A PDF with a text layer gives boxes from pdf.js for free. An image goes through tesseract.js in a web worker on the client, so the OCR pass costs nothing on the server and the file never has to be stored to be measured. The pass starts from the same press that sends the extraction, so the two run beside each other, and the fields stay readable, editable and exportable whether or not the boxes have landed. An image is what the app measures today; the pdf.js text layer arrives with the slice that accepts a PDF at all.
+
+The candidates the matcher scores are the runs of adjacent word boxes within one text line, capped at the `sourceText` token count plus two, so no candidate spans two lines. It scores each candidate as a normalized Levenshtein ratio, `1 - distance / max(len)`, over text case folded with whitespace and every punctuation mark except the decimal point stripped, because "4200" and "42.00" are different amounts. A candidate counts as a match at 0.72 or above, held as `MATCH_THRESHOLD` in `lib/highlight-match.ts`. That number is a judgment rather than a measurement: the 40 labelled fixtures of section 8 are the only evidence that can confirm it or replace it.
+
+For the OCR pass alone the browser downscales the image to a 2000-pixel long edge and multiplies every box back by the scale it used, so a region is always expressed in the image's natural pixels. That scale is separate from the downscaling the upload itself needs against Vercel's 4.5 MB request body cap, and it does not change the bytes the model sees. tesseract.js serves its worker script, its six wasm core variants and its English language data from `public/tesseract/` rather than from a CDN, so an outage elsewhere cannot break the demo, and the worker keeps the language data out of the browser's storage, because the session table of section 5 is the only thing this app writes there.
+
+When no candidate clears the threshold, the field shows no highlight rather than a wrong one, and the panel says which of the two absent cases it is: a null `sourceText` means the receipt printed no value to find, and a `sourceText` with no region means the app could not find that text on the image. The highlight is display only. No region, no selection and no word box reaches the receipt object, the arithmetic checks or the download.
 
 **Arithmetic is checked in code, not by the model.** Line items sum to the subtotal, and subtotal plus taxes plus tip equals the total. A mismatch is surfaced as a warning on the two fields involved, with the difference named. The app never quietly rewrites a number to make the math close.
 
@@ -98,7 +104,7 @@ Document the failure cases in the README rather than hiding them: faded thermal 
 | UI | Mantine, with its PostCSS preset |
 | Model | OpenAI API, `gpt-6.1-sol`, Structured Outputs in strict mode on the Responses API |
 | Validation | Zod, shared between the client and the server route |
-| OCR for boxes | tesseract.js in a web worker, pdf.js for PDFs with a text layer |
+| OCR for boxes | tesseract.js in a web worker, its worker, wasm core and language data self-hosted under `public/tesseract/`; pdf.js for PDFs with a text layer |
 | Session state | IndexedDB |
 | Host | Vercel, with Web Analytics in production builds only |
 | Tests | Vitest for the schema, the arithmetic checks and the matcher; Playwright for the upload-to-export path |
