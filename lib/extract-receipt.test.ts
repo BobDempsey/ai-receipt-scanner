@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { extractReceipt, type ModelCaller } from "./extract-receipt";
+import {
+  ACCEPTED_IMAGE_TYPES,
+  extractReceipt,
+  isAcceptedImageType,
+  type ModelCaller,
+} from "./extract-receipt";
 import type { Receipt } from "./receipt-schema";
 
 /** A minimal receipt the stubbed model answers with. */
@@ -92,19 +97,62 @@ afterEach(() => {
 });
 
 describe("extractReceipt", () => {
-  it("refuses a PNG by name without calling the model", async () => {
+  it.each(ACCEPTED_IMAGE_TYPES)("reads a %s upload", async (type) => {
     const { caller, calls } = stub(answer());
-    const png = new File([new Uint8Array(8)], "receipt.png", {
-      type: "image/png",
+    const file = new File([new Uint8Array(16)], "receipt", { type });
+
+    const outcome = await extractReceipt(form(file), caller);
+
+    expect(outcome.status).toBe(200);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("refuses a PDF by name without calling the model", async () => {
+    const { caller, calls } = stub(answer());
+    const pdf = new File([new Uint8Array(8)], "invoice.pdf", {
+      type: "application/pdf",
     });
 
-    const outcome = await extractReceipt(form(png), caller);
+    const outcome = await extractReceipt(form(pdf), caller);
 
     expect(outcome.status).toBe(415);
     expect(outcome.body).toEqual({
-      error: { code: "not_jpeg", message: expect.any(String) },
+      error: { code: "unsupported_type", message: expect.any(String) },
     });
     expect(calls).toHaveLength(0);
+  });
+
+  it("refuses a file whose type the browser left empty", async () => {
+    const { caller, calls } = stub(answer());
+    const unnamed = new File([new Uint8Array(8)], "receipt.jpg", { type: "" });
+
+    const outcome = await extractReceipt(form(unnamed), caller);
+
+    expect(outcome.status).toBe(415);
+    expect(outcome.body).toMatchObject({ error: { code: "unsupported_type" } });
+    expect(calls).toHaveLength(0);
+  });
+
+  it("names PDF in the refusal message, because the page accepts one", async () => {
+    const { caller } = stub(answer());
+    const heic = new File([new Uint8Array(8)], "receipt.heic", { type: "image/heic" });
+
+    const outcome = await extractReceipt(form(heic), caller);
+
+    const body = outcome.body as { error: { message: string } };
+    expect(body.error.message).toContain("PDF");
+    expect(body.error.message).toContain("JPEG");
+    expect(body.error.message).toContain("PNG");
+    expect(body.error.message).toContain("WebP");
+  });
+
+  it("carries the file's own type in the data URL", async () => {
+    const { caller, calls } = stub(answer());
+    const png = new File([new Uint8Array(16)], "receipt.png", { type: "image/png" });
+
+    await extractReceipt(form(png), caller);
+
+    expect(calls[0]).toMatch(/^data:image\/png;base64,/);
   });
 
   it("refuses a request carrying no file", async () => {
@@ -213,5 +261,19 @@ describe("extractReceipt", () => {
     expect(outcome.status).toBe(502);
     expect(JSON.stringify(outcome.body)).not.toContain("sk-secret");
     expect(outcome.body).toMatchObject({ error: { code: "model_call_failed" } });
+  });
+});
+
+describe("isAcceptedImageType", () => {
+  it("accepts each of the three types the route reads", () => {
+    for (const type of ACCEPTED_IMAGE_TYPES) {
+      expect(isAcceptedImageType(type)).toBe(true);
+    }
+  });
+
+  it("refuses a PDF, a HEIC and an empty type", () => {
+    expect(isAcceptedImageType("application/pdf")).toBe(false);
+    expect(isAcceptedImageType("image/heic")).toBe(false);
+    expect(isAcceptedImageType("")).toBe(false);
   });
 });

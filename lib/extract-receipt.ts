@@ -8,8 +8,16 @@ import {
   type Receipt,
 } from "./receipt-schema";
 
-/** The only file type slice 1 wires. Later slices add PNG, WebP and PDF. */
-export const ACCEPTED_MIME_TYPE = "image/jpeg";
+/**
+ * The types the route reads, which are images alone.
+ *
+ * A visitor can also pick a PDF, and the page rasterizes its first page before it
+ * posts, so a PDF reaches the route as one of these three. Accepting
+ * `application/pdf` here would be dead code with no PDF parser behind it.
+ */
+export const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+
+export type AcceptedImageType = (typeof ACCEPTED_IMAGE_TYPES)[number];
 
 /**
  * The file size the app refuses above. Slice 7 owns the full cap, including the
@@ -26,11 +34,19 @@ export type ExtractionOutcome =
 
 /** The copy the browser falls back to. The page keys its own wording off the code. */
 const ERROR_MESSAGES: Record<ExtractionErrorCode, string> = {
-  not_jpeg: "This slice reads JPEG photographs only.",
+  // The message names the four types a visitor can pick, not the three the route
+  // reads, because a refusal that left PDF out would read as the app rejecting a
+  // type the page offers.
+  unsupported_type: "The app reads JPEG, PNG and WebP images and PDF receipts.",
   too_large: "That file is larger than the app accepts.",
   model_call_failed: "The extraction did not finish.",
   validation_failed: "The model's answer did not match the shape the app expects.",
 };
+
+/** Whether the route reads this media type. */
+export function isAcceptedImageType(type: string): type is AcceptedImageType {
+  return (ACCEPTED_IMAGE_TYPES as readonly string[]).includes(type);
+}
 
 function fail(code: ExtractionErrorCode, status: number): ExtractionOutcome {
   return { status, body: { error: { code, message: ERROR_MESSAGES[code] } } };
@@ -86,11 +102,14 @@ export async function extractReceipt(
   const file = form.get("file");
 
   if (!(file instanceof File)) {
-    return fail("not_jpeg", 400);
+    return fail("unsupported_type", 400);
   }
 
-  if (file.type !== ACCEPTED_MIME_TYPE) {
-    return fail("not_jpeg", 415);
+  // A browser that reports an empty `type` fails this check, which is the answer
+  // the route wants: it refuses what it cannot name rather than reading an
+  // extension and guessing.
+  if (!isAcceptedImageType(file.type)) {
+    return fail("unsupported_type", 415);
   }
 
   if (file.size > MAX_FILE_BYTES) {
@@ -98,7 +117,9 @@ export async function extractReceipt(
   }
 
   const bytes = Buffer.from(await file.arrayBuffer());
-  const dataUrl = `data:${ACCEPTED_MIME_TYPE};base64,${bytes.toString("base64")}`;
+  // The file's own type, so a PNG reaches the model as a PNG rather than as bytes
+  // mislabelled by a constant.
+  const dataUrl = `data:${file.type};base64,${bytes.toString("base64")}`;
 
   let answer: string;
   try {

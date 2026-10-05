@@ -162,7 +162,7 @@ export type ReceiptLineItem = Receipt["lineItems"] extends (infer Entry)[] | nul
 
 /** The error identifiers the route answers with. The browser keys its copy off these. */
 export const EXTRACTION_ERROR_CODES = [
-  "not_jpeg",
+  "unsupported_type",
   "too_large",
   "model_call_failed",
   "validation_failed",
