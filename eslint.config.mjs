@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The tesseract.js worker script and wasm cores that
+    // scripts/copy-tesseract-assets.mjs copies out of node_modules. They are
+    // minified vendor files, so linting them reports thousands of problems about
+    // code this repo does not own.
+    "public/tesseract/**",
   ]),
 ]);
 

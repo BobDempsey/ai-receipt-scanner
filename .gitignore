@@ -43,3 +43,11 @@ next-env.d.ts
 
 # Local browser-driven checks. Nothing here belongs in the repo.
 .playwright-mcp/
+
+# tesseract.js assets. The worker script and the wasm cores are copied out of
+# node_modules by scripts/copy-tesseract-assets.mjs on every predev and prebuild,
+# so no binary from a package enters git and the copy cannot drift from the
+# installed version. The language data beside them is committed, because it comes
+# from the tessdata_fast release rather than from a package.
+/public/tesseract/*
+!/public/tesseract/eng.traineddata.gz
