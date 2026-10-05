@@ -18,7 +18,7 @@ They drop in a photo or a PDF. The image stays on the left at full height and th
 
 Fields the app is not sure about are flagged. The visitor fixes them inline, and the app rechecks the arithmetic on every edit.
 
-When the form is right they export: download JSON, download CSV, or copy either to the clipboard. A session table below holds every receipt they have scanned, so they can do several and export the batch as one file.
+When the form is right they export: download JSON, download CSV, or copy either to the clipboard, and the copy confirms when it worked and says plainly when the browser refused it. A session table below the panes holds every receipt they have scanned, newest first, naming each one's merchant, date and total and saying when it carries an arithmetic warning, so they can do several and export the batch as one file. Selecting a row reopens that receipt into the panes as the receipt every control acts on, and it comes back with no picture, because the app keeps no upload, so nothing marks a region on it. A session holding nothing shows no list at all. Receipts reach the table one upload at a time.
 
 If the upload is not a receipt, the app says so and shows nothing else.
 
@@ -61,9 +61,15 @@ When no candidate clears the threshold, the field shows no highlight rather than
 
 **Not a receipt is a first-class answer.** The response schema has an `isReceipt` boolean and a `reason` string. When it comes back false, the app shows the reason and stops, which is this project's version of the rule that the AI feature admits when something is past its data.
 
+**The CSV is one row per line item, with the receipt's own fields repeated on every row**, so a spreadsheet can group or pivot on any of them. A receipt that itemized nothing still gets one row whose item columns are empty, and a field the receipt did not print is an empty cell rather than a 0, because a 0 claims the receipt printed one. The column names and their order are the same on every export: the receipt's own fields in snake case (`merchant`, `merchant_address`, `date`, `time`, `currency`, `subtotal`, `tip`, `total`, `payment_method`, `card_last4`), then numbered `tax_1_label` and `tax_1_amount` pairs, then `item_description`, `item_quantity`, `item_unit_price` and `item_amount`. The item columns carry that prefix so an item amount is never read as the receipt total. Tax columns are sized to the widest receipt in the export, which is what lets one header serve every receipt in a file and makes the single-receipt export the batch export over a list of one. Quoting is minimal: a comma, a double quote or a newline puts a cell in quotes and an inner quote doubles, nothing else is altered, so no leading apostrophe, no thousands separator and no currency symbol reaches the file. Rows end CRLF.
+
+**A CSV carries no `confidence` and no `sourceText`.** Thirty-odd fields each gaining two siblings would bury the amounts a visitor opened the file for, so JSON is the export that carries both and the app says so where the CSV control sits. A receipt the model refused contributes no CSV data row and is not held in the session table either, because it fills no column the table lists; JSON is the format that carries a refusal and its reason. The batch JSON is `{ receipts: [ ... ] }`, each entry the envelope of `receipt`, `warnings` and `edited` the single-receipt download already writes, with no count and no timestamp around it. The four files download as `receipt.json`, `receipt.csv`, `session-receipts.json` and `session-receipts.csv`.
+
 ## 5. What is stored
 
-Nothing. Uploads are held in memory for the length of the request and never written to disk or to object storage. Extracted results live in the browser, in IndexedDB keyed to the tab's session, so a reload keeps the table and no visitor's scan can reach another visitor.
+Nothing on the server. Uploads are held in memory for the length of the request and never written to disk or to object storage. Extracted results live in the browser, in IndexedDB keyed to the tab's session, so a reload keeps the table and no visitor's scan can reach another visitor.
+
+The table is one IndexedDB database, `ai-receipt-scanner`, holding a `receipts` store indexed by `sessionId`. The session id is a random id in `sessionStorage`, created once per tab, so the table's lifetime is the tab's while the records outlive it harmlessly and a record whose session is gone is never listed. A stored record holds exactly six keys: `id`, `sessionId`, `savedAt`, `receipt`, `warnings` and `edited`. No id and no timestamp reaches the receipt object, which Zod governs, and no upload bytes and no image reach the store, which is why a reopened receipt has fields and no picture. The app writes the record on extraction and again on every accepted edit, add and remove, so the stored copy is true at all times rather than at scan time, and an edit keeps the record's original `savedAt`, so the list stays in scan order. The store enforces no count of its own, because the 40-per-session cap of section 6 is a separate check the app runs. When a browser offers no IndexedDB, or refuses it in a private window, the app reports an empty table and leaves the receipt on screen working rather than blanking the panel.
 
 The only server-side state is rate-limit counters. There is no database to seed, which is also why nothing one visitor does changes what the next one sees.
 
@@ -107,7 +113,7 @@ Document the failure cases in the README rather than hiding them: faded thermal 
 | Model | OpenAI API, `gpt-6.1-sol`, Structured Outputs in strict mode on the Responses API |
 | Validation | Zod, shared between the client and the server route |
 | OCR for boxes | tesseract.js in a web worker, its worker, wasm core and language data self-hosted under `public/tesseract/`; `pdfjs-dist` 6.4.299 for a PDF's first page, its text layer and its rasterizing, with its worker self-hosted under `public/pdfjs/` |
-| Session state | IndexedDB |
+| Session state | IndexedDB, database `ai-receipt-scanner`, with the tab's session id in `sessionStorage` |
 | Host | Vercel, with Web Analytics in production builds only |
 | Tests | Vitest for the schema, the arithmetic checks and the matcher; Playwright for the upload-to-export path |
 
