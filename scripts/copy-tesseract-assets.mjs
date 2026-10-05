@@ -3,28 +3,13 @@
  * into `public/tesseract/`, where the browser fetches them as static files.
  *
  * `createWorker` otherwise pulls its worker script and its core from a public CDN
- * at runtime, which makes a portfolio demo depend on a host nobody here controls.
- * Serving the files ourselves removes that dependency, and copying them on every
- * build rather than committing them keeps binaries out of git and keeps the copy
- * from drifting away from the installed version. Only `eng.traineddata.gz` is
- * committed, because the language data comes from the tessdata_fast release
- * rather than from a package.
- *
- * This runs as `prebuild` and `predev` on Windows and on Vercel's Linux builders,
- * so it is a Node script rather than a `cp` one-liner.
- *
- * The script creates `public/tesseract/` when it is absent and writes the files it
- * names. It never empties the directory: `eng.traineddata.gz` lives there and is
- * part of the repo, and nothing in this repo gets deleted to make room for
- * generated files.
+ * at runtime. `scripts/copy-vendor-assets.mjs` carries the rest of that argument
+ * and does the copying, and this script names the files tesseract.js needs. Only
+ * `eng.traineddata.gz` is committed, because the language data comes from the
+ * tessdata_fast release rather than from a package.
  */
 
-import { copyFile, mkdir, stat } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const destination = join(repoRoot, "public", "tesseract");
+import { copyVendorAssets } from "./copy-vendor-assets.mjs";
 
 /**
  * The worker boots from `worker.min.js` and then picks one core by name out of the
@@ -44,24 +29,4 @@ const assets = [
   "tesseract.js-core/tesseract-core-relaxedsimd-lstm.wasm.js",
 ];
 
-await mkdir(destination, { recursive: true });
-
-for (const asset of assets) {
-  const source = join(repoRoot, "node_modules", asset);
-  const name = asset.slice(asset.lastIndexOf("/") + 1);
-  const target = join(destination, name);
-
-  try {
-    await copyFile(source, target);
-  } catch (cause) {
-    throw new Error(
-      `could not copy ${asset} out of node_modules. Run npm install and try again.`,
-      { cause },
-    );
-  }
-
-  const { size } = await stat(target);
-  console.log(`tesseract assets: ${name} (${(size / 1024).toFixed(0)} KB)`);
-}
-
-console.log(`tesseract assets: ${assets.length} files in public/tesseract/`);
+await copyVendorAssets({ label: "tesseract assets", directory: "tesseract", assets });

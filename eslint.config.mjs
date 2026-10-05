@@ -17,6 +17,9 @@ const eslintConfig = defineConfig([
     // minified vendor files, so linting them reports thousands of problems about
     // code this repo does not own.
     "public/tesseract/**",
+    // The pdf.js worker that scripts/copy-pdfjs-assets.mjs copies, minified the
+    // same way and for the same reason.
+    "public/pdfjs/**",
   ]),
 ]);
 

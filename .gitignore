@@ -51,3 +51,8 @@ next-env.d.ts
 # from the tessdata_fast release rather than from a package.
 /public/tesseract/*
 !/public/tesseract/eng.traineddata.gz
+
+# pdf.js worker. scripts/copy-pdfjs-assets.mjs copies it out of node_modules on
+# every predev and prebuild, for the same reason the tesseract assets above are
+# copied rather than committed.
+/public/pdfjs/*
