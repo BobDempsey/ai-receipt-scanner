@@ -24,13 +24,45 @@
   min-width: 0;
 }
 
+/* The pane scrolls rather than the page, so a mark below the fold on a tall
+   receipt has somewhere to be brought into view from. */
+
+.scroller {
+  overflow: auto;
+  max-height: 70vh;
+  border-radius: var(--mantine-radius-sm);
+}
+
+/* The positioning context the mark sits in. The image fills it at its own aspect
+   ratio, so the box and the rendered photograph are the same rectangle and a
+   percentage of one is a percentage of the other. */
+
+.document {
+  position: relative;
+  display: block;
+  line-height: 0;
+}
+
 .preview {
   display: block;
   width: 100%;
   height: auto;
-  max-height: 70vh;
-  object-fit: contain;
   border-radius: var(--mantine-radius-sm);
+}
+
+/* The region of the selected field. Its four positions are percentages of the
+   image's natural pixel size, written inline because the app computes them, so
+   the browser rescales the mark with the image and nothing listens for a resize.
+   The fill is translucent and the border carries the colour, which is what keeps
+   the printed characters readable underneath. */
+
+.mark {
+  position: absolute;
+  box-sizing: border-box;
+  border: rem(2px) solid var(--mantine-primary-color-filled);
+  border-radius: rem(2px);
+  background-color: color-mix(in srgb, var(--mantine-primary-color-filled) 24%, transparent);
+  pointer-events: none;
 }
 
 .picker {
