@@ -43,9 +43,9 @@ Slice 4 of the nine-slice plan: OCR word boxes and click-to-highlight. The slice
 ## 6. The specs and the record
 
 - [x] 6.1 Update `ai-receipt-scanner-spec.md` where it disagrees with what this slice settled, including the threshold, the similarity measure and the image-only scope, and verify the product spec and the delta specs now say the same thing.
-- [ ] 6.2 Record the slice 4 decisions in `handoff.md`: the threshold as provisional, the self-hosted assets, the downscale, the derived region map, and the two absent-region sentences. Verify the outstanding-work inventory and `tasks.md` at the repo root both reflect the slice as done once group 7 passes.
+- [x] 6.2 Record the slice 4 decisions in `handoff.md`: the threshold as provisional, the self-hosted assets, the downscale, the derived region map, and the two absent-region sentences. Verify the outstanding-work inventory and `tasks.md` at the repo root both reflect the slice as done once group 7 passes.
 - [x] 6.3 Run `npm run lint`, `npm run typecheck` and `npm test`, and verify all three pass with the new unit tests counted.
 
 ## 7. End to end in the running app
 
-- [ ] 7.1 Deploy to production and verify on https://ai-receipt-scanner.bobdempsey83.com that a photographed JPEG receipt measures, that clicking `total` marks the printed total on the image, that clicking `merchant` marks the merchant line, that a field the receipt did not print says so, that a field whose text the pass could not find says the other sentence, that tabbing through the panel moves the mark, that correcting a value leaves its mark where it was, and that the JSON download still carries the three keys and nothing more.
+- [x] 7.1 Deploy to production and verify on https://ai-receipt-scanner.bobdempsey83.com that a photographed JPEG receipt measures, that clicking `total` marks the printed total on the image, that clicking `merchant` marks the merchant line, that a field the receipt did not print says so, that a field whose text the pass could not find says the other sentence, that tabbing through the panel moves the mark, that correcting a value leaves its mark where it was, and that the JSON download still carries the three keys and nothing more.
