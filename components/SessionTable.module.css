@@ -1,0 +1,20 @@
+/* A focusable table row marks focus with nothing of its own, the way a filled
+   Mantine input marks it with a one pixel border alone, so the row takes the same
+   two pixel ring the buttons and the panel's cells already draw. The offset is
+   negative so the ring sits inside the row rather than over the row above it. */
+
+.row {
+  cursor: pointer;
+}
+
+.row:focus-visible {
+  outline: rem(2px) solid var(--mantine-primary-color-filled);
+  outline-offset: rem(-2px);
+}
+
+/* The receipt the panes are showing, so a visitor reading the list can tell
+   which row the controls above act on without counting rows. */
+
+.openRow {
+  background-color: var(--mantine-color-default-hover);
+}

@@ -28,14 +28,29 @@ import {
 import { sourceTextFor } from "@/lib/field-source";
 import { buildRegionMap, regionFor } from "@/lib/highlight-match";
 import { PdfPageError, readFirstPage, type PdfFailureReason } from "@/lib/pdf-page";
-import { RECEIPT_JSON_FILENAME, receiptToJson } from "@/lib/receipt-json";
+import { receiptsToCsv } from "@/lib/receipt-csv";
+import {
+  RECEIPT_CSV_FILENAME,
+  RECEIPT_JSON_FILENAME,
+  SESSION_CSV_FILENAME,
+  SESSION_JSON_FILENAME,
+  receiptToJson,
+  receiptsToJson,
+} from "@/lib/receipt-json";
 import {
   isExtractionError,
   type ExtractionErrorCode,
   type ExtractionResponse,
   type Receipt,
 } from "@/lib/receipt-schema";
+import {
+  listSessionReceipts,
+  newStoredReceipt,
+  putReceipt,
+  type StoredReceipt,
+} from "@/lib/session-store";
 import { createOcrPass, type Measurement, type OcrPass } from "@/lib/word-boxes";
+import { SessionTable, type CopyNote } from "./SessionTable";
 import classes from "./ReceiptWorkspace.module.css";
 
 /** Which step the workspace is on. The panel on the right renders one of these. */
@@ -106,6 +121,25 @@ const NO_REGION_COPY = {
   unmatched: "The app could not find this text on the image, so it marked no region.",
 } as const;
 
+/**
+ * What the document pane says for a receipt reopened from the session table.
+ *
+ * The app stores no upload, so there is no picture to show and nothing to
+ * measure. The wording stays apart from `NO_REGION_COPY.unmatched`, because a
+ * missing picture is a different fact from text the pass could not find on one.
+ */
+const NO_IMAGE_COPY =
+  "The app kept no picture of this receipt, because it stores no upload. The fields, the arithmetic and the exports all work on it, and nothing marks a region, because there is no image to mark.";
+
+/**
+ * Which set of controls a clipboard answer belongs to.
+ *
+ * The receipt on screen and the whole session each carry their own copy
+ * controls, so the confirmation prints beside the control the visitor pressed
+ * rather than once for both.
+ */
+type CopyPlace = "receipt" | "session";
+
 /** The copy a visitor reads for each error the route can answer with. */
 const FAILURE_COPY: Record<ExtractionErrorCode, { title: string; body: string }> = {
   unsupported_type: {
@@ -175,6 +209,23 @@ export function ReceiptWorkspace() {
   const [pageCount, setPageCount] = useState<number | null>(null);
   /** What the pass measured: the text lines and the image's natural pixel size. */
   const [measurement, setMeasurement] = useState<Measurement | null>(null);
+  /**
+   * The session's stored receipts, newest first, as the table lists them.
+   *
+   * The list mirrors what IndexedDB holds: the mount read fills it, every write
+   * updates both, and a write the store refused leaves the receipt on screen
+   * working with the row it already shows.
+   */
+  const [records, setRecords] = useState<StoredReceipt[]>([]);
+  /** Which stored record the panes are showing, so an edit writes over that one. */
+  const [openId, setOpenId] = useState<string | null>(null);
+  /**
+   * True when the receipt on screen came back from the table rather than from an
+   * upload, which is the one case the document pane has no image for.
+   */
+  const [reopened, setReopened] = useState(false);
+  /** The last clipboard answer, and which set of controls asked for it. */
+  const [copied, setCopied] = useState<{ place: CopyPlace; note: CopyNote } | null>(null);
   const inFlight = useRef(false);
   const keyCount = useRef(0);
   /**
@@ -283,6 +334,80 @@ export function ReceiptWorkspace() {
   }, []);
 
   /**
+   * Reads the session's table once, on mount.
+   *
+   * A store the browser will not open answers with an empty list rather than
+   * throwing, so a private window shows no list and the rest of the page works
+   * exactly as it did before this slice.
+   */
+  useEffect(() => {
+    let listening = true;
+
+    void listSessionReceipts().then((held) => {
+      if (listening) {
+        setRecords(held);
+      }
+    });
+
+    return () => {
+      listening = false;
+    };
+  }, []);
+
+  /** The stored record the panes are showing, or null before the first extraction. */
+  const openRecord = useMemo(
+    () => (openId ? (records.find((record) => record.id === openId) ?? null) : null),
+    [openId, records],
+  );
+
+  /**
+   * Writes one record to the table and to the list beside it.
+   *
+   * Every path that changes the receipt goes through here, so the stored record
+   * is true at all times rather than true at scan time. The write is
+   * fire-and-forget against the render: a store that refused it logs once and
+   * leaves the receipt on screen working, because losing the table is worse than
+   * losing the receipt and neither should blank the panel.
+   */
+  const remember = useCallback((next: StoredReceipt) => {
+    setRecords((held) =>
+      held.some((record) => record.id === next.id)
+        ? held.map((record) => (record.id === next.id ? next : record))
+        : [next, ...held],
+    );
+
+    void putReceipt(next).then((written) => {
+      if (!written) {
+        console.warn(
+          "The session table would not take this receipt, so a reload will not list it.",
+        );
+      }
+    });
+  }, []);
+
+  /**
+   * Writes the receipt on screen over the record it came from.
+   *
+   * `savedAt` stays what it was, so correcting the oldest receipt leaves it where
+   * the visitor found it in the list rather than moving it to the top.
+   */
+  const rememberOpen = useCallback(
+    (next: Receipt, nextWarnings: ArithmeticWarning[], nextEdited: EditedFields) => {
+      if (!openRecord) {
+        return;
+      }
+
+      remember({
+        ...openRecord,
+        receipt: next,
+        warnings: [...nextWarnings],
+        edited: [...nextEdited],
+      });
+    },
+    [openRecord, remember],
+  );
+
+  /**
    * Picking a file replaces the one already chosen rather than queuing a second,
    * and the preview is an object URL over the file the browser already holds. A
    * PDF gets no preview yet: its first page becomes an image on submit, and the
@@ -308,6 +433,9 @@ export function ReceiptWorkspace() {
       setSelected(null);
       setMeasurement(null);
       setOcrPhase("idle");
+      setOpenId(null);
+      setReopened(false);
+      setCopied(null);
     },
     [stopPass, showPreview],
   );
@@ -445,6 +573,9 @@ export function ReceiptWorkspace() {
     setItemKeys([]);
     setFailure(null);
     setSelected(null);
+    setOpenId(null);
+    setReopened(false);
+    setCopied(null);
 
     try {
       /** The image every later step reads: the file itself, or the page read out of it. */
@@ -488,16 +619,25 @@ export function ReceiptWorkspace() {
       setReceipt(body);
       // The checks run here, on what the browser already holds. No second request
       // leaves the page to produce a warning.
-      setWarnings(body.isReceipt ? arithmeticWarnings(body) : []);
+      const found = body.isReceipt ? arithmeticWarnings(body) : [];
+      setWarnings(found);
       setItemKeys(freshKeys((body.lineItems ?? []).length));
       setPhase(body.isReceipt ? "result" : "not-a-receipt");
+
+      // A refused upload holds no value in any column the table lists, so the
+      // session keeps the receipts the model read and nothing else.
+      if (body.isReceipt) {
+        const record = newStoredReceipt(body, found);
+        setOpenId(record.id);
+        remember(record);
+      }
     } catch {
       setFailure("model_call_failed");
       setPhase("failed");
     } finally {
       inFlight.current = false;
     }
-  }, [file, freshKeys, measure, readPdfPage, holdMeasurement]);
+  }, [file, freshKeys, measure, readPdfPage, holdMeasurement, remember]);
 
   /**
    * Takes one committed edit, or refuses it.
@@ -525,9 +665,15 @@ export function ReceiptWorkspace() {
         return false;
       }
 
+      const nextEdited = recordEdited(edited, address);
+      const nextWarnings = arithmeticWarnings(result.receipt);
+
       setReceipt(result.receipt);
-      setEdited((recorded) => recordEdited(recorded, address));
-      setWarnings(arithmeticWarnings(result.receipt));
+      setEdited(nextEdited);
+      setWarnings(nextWarnings);
+      // The stored record follows the edit, so a later reload shows the
+      // correction and the row in the list follows it too.
+      rememberOpen(result.receipt, nextWarnings, nextEdited);
       setRejections((standing) => {
         if (!(key in standing)) {
           return standing;
@@ -539,7 +685,7 @@ export function ReceiptWorkspace() {
 
       return true;
     },
-    [receipt],
+    [receipt, edited, rememberOpen],
   );
 
   /** Adds an empty item, then runs the same recheck a committed edit runs. */
@@ -549,11 +695,13 @@ export function ReceiptWorkspace() {
     }
 
     const change = addLineItem(receipt, edited);
+    const found = arithmeticWarnings(change.receipt);
     setReceipt(change.receipt);
     setEdited(change.edited);
-    setWarnings(arithmeticWarnings(change.receipt));
+    setWarnings(found);
     setItemKeys((keys) => [...keys, ...freshKeys(1)]);
-  }, [receipt, edited, freshKeys]);
+    rememberOpen(change.receipt, found, change.edited);
+  }, [receipt, edited, freshKeys, rememberOpen]);
 
   /**
    * Removes one item, follows the recorded edits and the standing refusals
@@ -566,6 +714,7 @@ export function ReceiptWorkspace() {
       }
 
       const change = removeLineItem(receipt, index, edited);
+      const found = arithmeticWarnings(change.receipt);
       // An item address names a position rather than a row, so the selection a
       // visitor made before the shift would mark another row's words. The region
       // map needs no such follow: it is derived from the receipt that now exists.
@@ -574,8 +723,9 @@ export function ReceiptWorkspace() {
       }
       setReceipt(change.receipt);
       setEdited(change.edited);
-      setWarnings(arithmeticWarnings(change.receipt));
+      setWarnings(found);
       setItemKeys((keys) => keys.filter((_, position) => position !== index));
+      rememberOpen(change.receipt, found, change.edited);
       setRejections((standing) => {
         const next: Rejections = {};
         for (const [key, message] of Object.entries(standing)) {
@@ -587,7 +737,7 @@ export function ReceiptWorkspace() {
         return next;
       });
     },
-    [receipt, edited, selected],
+    [receipt, edited, selected, rememberOpen],
   );
 
   const mark = useRef<HTMLDivElement | null>(null);
@@ -618,21 +768,126 @@ export function ReceiptWorkspace() {
       ? FAILURE_COPY[failure]
       : null;
 
-  const download = useCallback(() => {
-    if (!receipt) {
+  /**
+   * Puts a stored receipt back in the panes, as the state an extraction leaves.
+   *
+   * There is one receipt on screen and one set of controls acting on it, so a
+   * reopen writes the same state the extraction writes rather than a second path
+   * beside it. The image is the one thing it cannot bring back: the app stores no
+   * upload, so the preview, the measurement and the regions all go, and the pane
+   * says why.
+   */
+  const reopen = useCallback(
+    (id: string) => {
+      const record = records.find((held) => held.id === id);
+      if (!record) {
+        return;
+      }
+
+      stopPass();
+      measureRun.current += 1;
+      rasterized.current = null;
+      showPreview(null);
+      setFile(null);
+      setPdfPhase("idle");
+      setPdfFailure(null);
+      setPageCount(null);
+      setMeasurement(null);
+      setOcrPhase("idle");
+      setSelected(null);
+      setRejections({});
+      setFailure(null);
+      setCopied(null);
+      setOpenId(record.id);
+      setReceipt(record.receipt);
+      setWarnings(record.warnings);
+      setEdited(record.edited);
+      // The row keys describe this tab rather than the receipt, so a reopened
+      // receipt gets fresh ones instead of any the earlier render used.
+      setItemKeys(freshKeys((record.receipt.lineItems ?? []).length));
+      setPhase("result");
+      setReopened(true);
+    },
+    [records, stopPass, showPreview, freshKeys],
+  );
+
+  /** Hands the browser one file to save, which is the path no permission gates. */
+  const save = useCallback((text: string, filename: string, type: string) => {
+    const url = URL.createObjectURL(new Blob([text], { type }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  /**
+   * Writes one export to the clipboard from the press itself.
+   *
+   * `navigator.clipboard.writeText` wants a user gesture and a secure context,
+   * so the call runs inside the handler rather than after an await the browser
+   * stops trusting. A refusal says the copy did not happen and leaves the
+   * download as the way out, rather than reporting a success the app did not get.
+   */
+  const copy = useCallback((place: CopyPlace, what: string, text: string) => {
+    const clipboard = navigator.clipboard;
+
+    if (!clipboard) {
+      setCopied({
+        place,
+        note: {
+          ok: false,
+          message: `This browser gave the app no clipboard, so it copied nothing. Download ${what} instead.`,
+        },
+      });
       return;
     }
 
-    const blob = new Blob([receiptToJson(receipt, warnings, edited)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = RECEIPT_JSON_FILENAME;
-    link.click();
-    URL.revokeObjectURL(url);
-  }, [receipt, warnings, edited]);
+    void clipboard.writeText(text).then(
+      () => {
+        setCopied({ place, note: { ok: true, message: `The app copied ${what} to your clipboard.` } });
+      },
+      () => {
+        setCopied({
+          place,
+          note: {
+            ok: false,
+            message: `Your browser refused the clipboard write, so the app copied nothing. Download ${what} instead.`,
+          },
+        });
+      },
+    );
+  }, []);
+
+  /** The receipt on screen as each format writes it, built on the press. */
+  const receiptJson = useCallback(
+    () => (receipt ? receiptToJson(receipt, warnings, edited) : ""),
+    [receipt, warnings, edited],
+  );
+  const receiptCsv = useCallback(() => (receipt ? receiptsToCsv([receipt]) : ""), [receipt]);
+
+  /**
+   * The whole session as each format writes it.
+   *
+   * Both read `records`, which every write keeps current, so the batch carries
+   * the correction the visitor made a moment ago rather than the values the
+   * extraction returned.
+   */
+  const sessionJson = useCallback(
+    () =>
+      receiptsToJson(
+        records.map(({ receipt: held, warnings: found, edited: typed }) => ({
+          receipt: held,
+          warnings: found,
+          edited: typed,
+        })),
+      ),
+    [records],
+  );
+  const sessionCsv = useCallback(
+    () => receiptsToCsv(records.map((record) => record.receipt)),
+    [records],
+  );
 
   return (
     <Container size="xl" py="xl">
@@ -668,9 +923,10 @@ export function ReceiptWorkspace() {
               </Button>
             </Group>
             <Text c="dimmed" size="sm" maw="65ch">
-              The app keeps nothing. Your upload lives in memory for the length of
-              the request and reaches no disk and no database, and the result lives
-              in this browser tab until you close it.
+              The app keeps nothing on the server. Your upload lives in memory for
+              the length of the request and reaches no disk and no database. This
+              session&apos;s receipts live in this browser, survive a reload and end
+              when you close the tab.
             </Text>
           </Stack>
         </Paper>
@@ -753,9 +1009,11 @@ export function ReceiptWorkspace() {
                 </div>
               ) : (
                 <Text c="dimmed" size="sm">
-                  {file?.type === PDF_TYPE
-                    ? "The first page of that PDF appears here once the extraction starts, because the app reads it into an image first."
-                    : "Nothing chosen yet. The photograph you pick appears here."}
+                  {reopened
+                    ? NO_IMAGE_COPY
+                    : file?.type === PDF_TYPE
+                      ? "The first page of that PDF appears here once the extraction starts, because the app reads it into an image first."
+                      : "Nothing chosen yet. The photograph you pick appears here."}
                 </Text>
               )}
             </Stack>
@@ -799,15 +1057,51 @@ export function ReceiptWorkspace() {
                   selectionNote={selectionNote}
                 />
                 <Stack gap="xs">
-                  <Group>
-                    <Button variant="light" onClick={download}>
-                      Download the JSON
+                  <Group gap="sm" wrap="wrap">
+                    <Button
+                      variant="light"
+                      onClick={() =>
+                        save(receiptJson(), RECEIPT_JSON_FILENAME, "application/json")
+                      }
+                    >
+                      Download this receipt as JSON
+                    </Button>
+                    <Button
+                      variant="subtle"
+                      onClick={() => copy("receipt", "this receipt's JSON", receiptJson())}
+                    >
+                      Copy this receipt as JSON
+                    </Button>
+                    <Button
+                      variant="light"
+                      onClick={() => save(receiptCsv(), RECEIPT_CSV_FILENAME, "text/csv")}
+                    >
+                      Download this receipt as CSV
+                    </Button>
+                    <Button
+                      variant="subtle"
+                      onClick={() => copy("receipt", "this receipt's CSV", receiptCsv())}
+                    >
+                      Copy this receipt as CSV
                     </Button>
                   </Group>
+                  {copied?.place === "receipt" && copied.note ? (
+                    <Text
+                      role="status"
+                      size="xs"
+                      c={copied.note.ok ? "teal" : "red"}
+                      maw="65ch"
+                    >
+                      {copied.note.message}
+                    </Text>
+                  ) : null}
                   <Text c="dimmed" size="xs" maw="65ch">
-                    Your corrections live in this browser tab and the app stores
-                    nothing, so a reload loses the receipt and its edits together.
-                    The download is how you keep a corrected receipt.
+                    This session&apos;s receipts live in this browser, survive a
+                    reload and end when you close the tab, and nothing about them
+                    reaches the server. A download or a copy is how a corrected
+                    receipt leaves this browser. The CSV gives one row per line
+                    item; the JSON is the one that carries each field&apos;s
+                    confidence and the text the model read it from.
                   </Text>
                 </Stack>
               </Stack>
@@ -836,6 +1130,17 @@ export function ReceiptWorkspace() {
             ) : null}
           </Paper>
         </div>
+
+        <SessionTable
+          records={records}
+          openId={openId}
+          onSelect={reopen}
+          onDownloadJson={() => save(sessionJson(), SESSION_JSON_FILENAME, "application/json")}
+          onCopyJson={() => copy("session", "every receipt as JSON", sessionJson())}
+          onDownloadCsv={() => save(sessionCsv(), SESSION_CSV_FILENAME, "text/csv")}
+          onCopyCsv={() => copy("session", "every receipt as CSV", sessionCsv())}
+          copyNote={copied?.place === "session" ? copied.note : null}
+        />
       </Stack>
     </Container>
   );

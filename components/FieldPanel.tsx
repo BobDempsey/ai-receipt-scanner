@@ -536,8 +536,9 @@ export function FieldPanel({
         Type over any value and press Enter or leave the field to keep it. The app
         checks what you typed against the same rules it checked the model&apos;s
         answer with, and runs both arithmetic checks again. A refused value stays
-        out of the receipt and the field keeps what it held. Your corrections live
-        in this browser tab, so the download is how you keep them.
+        out of the receipt and the field keeps what it held. The app writes each
+        correction to this session&apos;s table, so a reload keeps it and closing
+        the tab ends it.
       </Text>
     </Stack>
   );
