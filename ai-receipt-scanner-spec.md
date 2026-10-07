@@ -14,7 +14,7 @@ This one runs on OpenAI too, so all four AI projects share a provider. What sepa
 
 They land on the page and see the drop zone in the hero, with three sample receipts sitting under it. They can try the app without finding a file of their own, and without scrolling.
 
-They drop in a photo or a PDF. The image stays on the left at full height and the extracted form fills in on the right as the model reads it. A PDF's first page becomes an image in the browser before anything is sent, and that image is what the left pane shows, so the visitor checks a value against the same bitmap the model read. When the PDF runs to more than one page the app names the count beside it, such as the first page of four, rather than leaving the visitor to wonder what happened to page two. Every field shows a confidence state, and reaching a field, by a click or by keyboard focus, marks the region of the image the value came from. One field is marked at a time, so nothing on the image claims two fields were read from the same words.
+They drop in a photo or a PDF. The image stays on the left at full height and the extracted form fills in on the right as the model reads it. A PDF's first page becomes an image in the browser before anything is sent, and that image is what the left pane shows, so the visitor checks a value against the same bitmap the model read. When the PDF runs to more than one page the app names the count beside it, such as the first page of four, rather than leaving the visitor to wonder what happened to page two. When a photograph is larger than the host will carry, the browser reduces it before it posts and the app says so, naming the size before and after, so a visitor checking the fields against their own file knows the model read a smaller copy. Every field shows a confidence state, and reaching a field, by a click or by keyboard focus, marks the region of the image the value came from. One field is marked at a time, so nothing on the image claims two fields were read from the same words.
 
 Fields the app is not sure about are flagged. The visitor fixes them inline, and the app rechecks the arithmetic on every edit.
 
@@ -71,7 +71,7 @@ Nothing on the server. Uploads are held in memory for the length of the request 
 
 The table is one IndexedDB database, `ai-receipt-scanner`, holding a `receipts` store indexed by `sessionId`. The session id is a random id in `sessionStorage`, created once per tab, so the table's lifetime is the tab's while the records outlive it harmlessly and a record whose session is gone is never listed. A stored record holds exactly six keys: `id`, `sessionId`, `savedAt`, `receipt`, `warnings` and `edited`. No id and no timestamp reaches the receipt object, which Zod governs, and no upload bytes and no image reach the store, which is why a reopened receipt has fields and no picture. The app writes the record on extraction and again on every accepted edit, add and remove, so the stored copy is true at all times rather than at scan time, and an edit keeps the record's original `savedAt`, so the list stays in scan order. The store enforces no count of its own, because the 40-per-session cap of section 6 is a separate check the app runs. When a browser offers no IndexedDB, or refuses it in a private window, the app reports an empty table and leaves the receipt on screen working rather than blanking the panel.
 
-The only server-side state is rate-limit counters. There is no database to seed, which is also why nothing one visitor does changes what the next one sees.
+The only server-side state is rate-limit counters. They live in Upstash Redis, reached over its REST API with the `KV_REST_API_URL` and `KV_REST_API_TOKEN` the Vercel marketplace integration writes, because a counter in a serverless function's memory counts one warm instance rather than an address. There is no database to seed, which is also why nothing one visitor does changes what the next one sees.
 
 Say all of this on the page, next to the drop zone. A stranger uploading a real receipt deserves to know before they do it, not in the About page afterwards.
 
@@ -82,19 +82,32 @@ Say all of this on the page, next to the drop zone. A stranger uploading a real 
 | File size | 8 MB |
 | File types | `image/jpeg`, `image/png`, `image/webp`, `application/pdf` |
 | PDF pages read | 1 (the first) |
-| Files per batch | 5 |
-| Extractions per IP | 20 an hour, at the edge |
+| Files per batch | 5, at the server route |
+| Extractions per IP | 20 an hour, counted before the model call |
 | Extractions per session | 40, in the app |
+| Request body posted | 3,300,000 bytes, which the browser reduces an image to fit |
 
 Reject an oversized or wrong-typed file in the browser before it is uploaded, and again on the server, because the browser check is a convenience and not a control. The four types are what the page offers a visitor; the server route accepts the three image types, because the page rasterizes a PDF's first page before it posts. Both checks name the four a visitor can pick, so a refusal never reads as the app rejecting a type the page offered, and both answer with one code, `unsupported_type`, whose message reads "The app reads JPEG, PNG and WebP images and PDF receipts."
 
 A PDF of more than one page carries a notice beside the document naming the count, such as the first page of four. A single-page PDF says nothing about pages, because it left nothing out, and neither does an image.
 
+An image the host will not carry is reduced rather than refused. The browser re-encodes a chosen image as JPEG at quality 0.82 and halves its long edge only when the re-encode at the natural size is not enough on its own, stopping at the first size whose encoded bytes fit `BODY_BUDGET_BYTES`, 3,300,000. That budget is 4,500,000 times three quarters, for the base64 expansion the route applies when it builds the data URL, with 75,000 bytes held back for the multipart wrapper. Below a 640-pixel long edge the app gives up and says the image is too large to send even reduced, because a receipt's body text stops being legible under that. The 8 MB file cap is unchanged by any of this, and a rasterized PDF page reaches the same path as an image like any other. The workspace says when it reduced an image, naming the size before and after, and says nothing when nothing was reduced.
+
+The five-file cap is checked at the server route alone. The page's picker submits one file, so the browser has no batch to check and the app claims no check it does not make. A request carrying more files than that can only be one crafted outside the app, and the route refuses it before it calls the model.
+
+The hour of the per-IP limit is a fixed window. The counter key is the caller's address plus the clock hour, incremented with `INCRBY` and given an `EXPIRE` on the first write of that window alone, so the stated reset time stays put and an old window retires with no sweep behind it. A refused request answers with the code `rate_limited`, the 20, the fact that the allowance is shared by everyone sending from the same address, and the time it returns, which the page formats in the visitor's own zone from the epoch-millisecond `resetAt` the route sends. The cost of a fixed window is a boundary burst: a visitor can spend twenty at 10:59 and twenty more at 11:00, which for a demo whose risk is a bored stranger buys a refusal a visitor can act on. A request with no usable forwarded address counts against one shared key rather than passing uncounted, so a missing address cannot become an unlimited lane.
+
+A counter the route cannot reach refuses the extraction, with `rate_limited`, HTTP 503 and no reset time to name, because failing open on a route that spends money is the wrong default. Credentials that are absent altogether instead allow the extraction and log loudly, because a deployment nobody finished should not take the demo down. Both choices are the opposite way round from the session table, which keeps working when a browser refuses IndexedDB, and the difference is that a lost list costs the visitor nothing where an uncounted model call costs money.
+
+The session cap of 40 counts against the same tab session id the stored receipts are keyed to, held in `sessionStorage` beside that id rather than derived from the stored records, because a visitor could otherwise lower the cap by scanning receipts the app refused to store, and because the count has to work in a browser offering no IndexedDB. It survives a reload, ends when the tab does, and a new tab starts at zero. The app checks it before anything leaves the browser, so a refusal costs no request, and the server deliberately does not check it again: the server cannot verify a tab session id a browser asserts, so the cap is an in-app courtesy and the per-IP limit is the control. Its code is `session_cap_reached`, which never reaches a response body, because the app refuses before it sends.
+
+One extraction is one model call. A refusal the route made before calling the model costs nothing against either allowance, the hourly refusal included, and a call that was made and then failed costs one, because the money was spent.
+
 ## 7. The samples
 
-Three fictional receipts ship with the app: a thermal grocery receipt with many line items, a restaurant receipt with a tip and two tax lines, and a scanned PDF invoice. Each is labelled fictional on the page.
+Three fictional receipts ship with the app under `public/samples/`: `grocery-thermal.jpg`, a thermal receipt from LANTERN ROW MARKET with eleven line items, `restaurant-tip.jpg`, a bill from THE COPPER KETTLE BISTRO carrying a tip and two tax lines whose printed figures all add up, and `invoice-scanned.pdf`, a scan from ALDERWAY OFFICE SUPPLY CO. with no text layer, so it exercises the rasterize and the OCR fallback of section 4. Each is labelled fictional where the visitor reads it, and each loads with one press through the same submit an upload uses, so nothing downstream of the picker learns that a sample is not a file the visitor chose.
 
-Pick them so they exercise the hard parts rather than the easy one. One of the three should have a line-item sum that does not match its printed subtotal, so a visitor sees the arithmetic warning without having to hunt for a bad receipt.
+Pick them so they exercise the hard parts rather than the easy one. The grocery receipt is the one that does not balance: its eleven items sum to 66.73 against a printed subtotal of 67.63, a gap of 0.90, so a visitor sees the arithmetic warning without having to hunt for a bad receipt. Its printed total agrees with its printed subtotal, so that gap raises the line-item warning alone. `scripts/make-sample-receipts.mjs` writes the three files and holds the reason behind every amount printed on them.
 
 ## 8. Accuracy, measured
 
@@ -113,7 +126,8 @@ Document the failure cases in the README rather than hiding them: faded thermal 
 | Model | OpenAI API, `gpt-6.1-sol`, Structured Outputs in strict mode on the Responses API |
 | Validation | Zod, shared between the client and the server route |
 | OCR for boxes | tesseract.js in a web worker, its worker, wasm core and language data self-hosted under `public/tesseract/`; `pdfjs-dist` 6.4.299 for a PDF's first page, its text layer and its rasterizing, with its worker self-hosted under `public/pdfjs/` |
-| Session state | IndexedDB, database `ai-receipt-scanner`, with the tab's session id in `sessionStorage` |
+| Session state | IndexedDB, database `ai-receipt-scanner`, with the tab's session id and its extraction count in `sessionStorage` |
+| Rate-limit counters | Upstash Redis over its REST API through `@upstash/redis`, keyed by address and clock hour |
 | Host | Vercel, with Web Analytics in production builds only |
 | Tests | Vitest for the schema, the arithmetic checks and the matcher; Playwright for the upload-to-export path |
 
