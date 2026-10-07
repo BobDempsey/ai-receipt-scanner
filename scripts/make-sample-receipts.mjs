@@ -11,94 +11,17 @@
  * and prints each one's size. Nothing in the build calls it, because the outputs
  * are committed.
  *
- * `sharp` renders the SVG. It already sits in `node_modules` as a Next dependency,
- * and this script is the only thing in the repo that asks it for anything.
+ * `sharp` renders the SVG. It already sits in `node_modules` as a Next dependency.
+ * The renderer itself lives in `scripts/receipt-svg.mjs`, because the accuracy
+ * fixtures draw their forty receipts on the same grid these three print on.
  */
 
 import { writeFileSync, statSync, mkdirSync } from "node:fs";
 import sharp from "sharp";
+import { renderSvg, itemRows, sumAmounts } from "./receipt-svg.mjs";
 
 const OUT = "public/samples";
 mkdirSync(OUT, { recursive: true });
-
-/* ------------------------------------------------------------------ *
- * The SVG receipt renderer
- * ------------------------------------------------------------------ */
-
-/**
- * Courier New is the typeface, because a thermal till and a dot matrix invoice
- * both print on a fixed grid, and a proportional face gives away that the column
- * of amounts was laid out by hand. Its advance width is 0.6 of the point size,
- * which is what lets a dashed rule be sized by character count.
- */
-const FONT = "Courier New, Courier, monospace";
-const ADVANCE = 0.6;
-
-function escapeText(value) {
-  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-/**
- * Lays rows out top to bottom and returns the SVG with the height it needed.
- *
- * A row is one of: `center` text, `left` text, a `split` of a label and an amount
- * at the two ends of the line, a `rule` of dashes, or a `gap` of blank lines. A
- * receipt prints a label and its amount at the two ends of one line, so `split` is
- * a row of its own rather than two rows the caller has to align.
- */
-function renderSvg({ width, margin, size, lineHeight, background, ink, rows }) {
-  const columns = Math.floor((width - margin * 2) / (size * ADVANCE));
-  const parts = [];
-  let y = margin + size;
-
-  const text = (value, x, anchor, weight) =>
-    `<text x="${x}" y="${y.toFixed(1)}" font-family="${FONT}" font-size="${
-      weight === "bold" ? size + 1 : size
-    }" font-weight="${weight ?? "normal"}" fill="${ink}" text-anchor="${anchor}" xml:space="preserve">${escapeText(
-      value,
-    )}</text>`;
-
-  for (const row of rows) {
-    if (row.gap) {
-      y += lineHeight * row.gap;
-      continue;
-    }
-    if (row.rule) {
-      parts.push(text("-".repeat(columns), margin, "start"));
-    } else if (row.center) {
-      parts.push(text(row.center, width / 2, "middle", row.weight));
-    } else if (row.split) {
-      parts.push(text(row.split[0], margin, "start", row.weight));
-      parts.push(text(row.split[1], width - margin, "end", row.weight));
-    } else {
-      parts.push(text(row.left ?? "", margin, "start", row.weight));
-    }
-    y += lineHeight;
-  }
-
-  const height = Math.round(y + margin);
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="${width}" height="${height}" fill="${background}"/>${parts.join(
-    "",
-  )}</svg>`;
-}
-
-/** Turns line items into the rows a till prints, with the quantity line only where there is one. */
-function itemRows(items, { alwaysQuantity = false } = {}) {
-  return items.flatMap((item) =>
-    item.quantity === "1" && !alwaysQuantity
-      ? [{ split: [item.description, `$${item.amount}`] }]
-      : [
-          { split: [item.description, `$${item.amount}`] },
-          { left: `   ${item.quantity} @ $${item.unitPrice}` },
-        ],
-  );
-}
-
-/** Adds item amounts in whole cents, so the gap a sample prints is a stated figure. */
-function sumAmounts(items) {
-  const cents = items.reduce((total, item) => total + Math.round(Number(item.amount) * 100), 0);
-  return (cents / 100).toFixed(2);
-}
 
 /* ------------------------------------------------------------------ *
  * Sample 1: the thermal grocery receipt whose items do not sum

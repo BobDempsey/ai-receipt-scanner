@@ -1,0 +1,104 @@
+{
+  "fixture": "f08",
+  "image": "f08-hotel-verdant-court.jpg",
+  "layout": "invoice",
+  "degradations": [
+    "blur"
+  ],
+  "receipt": {
+    "isReceipt": true,
+    "reason": null,
+    "merchant": "HOTEL VERDANT COURT",
+    "merchantConfidence": null,
+    "merchantSourceText": "HOTEL VERDANT COURT",
+    "merchantAddress": "Rue des Tanneurs 42, 1000 Brussels",
+    "merchantAddressConfidence": null,
+    "merchantAddressSourceText": "Rue des Tanneurs 42, 1000 Brussels",
+    "date": "2026-03-10",
+    "dateConfidence": null,
+    "dateSourceText": "2026-03-10",
+    "time": "12:07",
+    "timeConfidence": null,
+    "timeSourceText": "12:07",
+    "currency": "EUR",
+    "currencyConfidence": null,
+    "currencySourceText": "€",
+    "subtotal": "287.20",
+    "subtotalConfidence": null,
+    "subtotalSourceText": "€287.20",
+    "taxes": [
+      {
+        "label": "VAT 21.00%",
+        "labelConfidence": null,
+        "labelSourceText": "VAT 21.00%",
+        "amount": "60.31",
+        "amountConfidence": null,
+        "amountSourceText": "€60.31"
+      },
+      {
+        "label": "CITY TAX 3.00%",
+        "labelConfidence": null,
+        "labelSourceText": "CITY TAX 3.00%",
+        "amount": "8.62",
+        "amountConfidence": null,
+        "amountSourceText": "€8.62"
+      }
+    ],
+    "tip": "14.36",
+    "tipConfidence": null,
+    "tipSourceText": "€14.36",
+    "total": "370.49",
+    "totalConfidence": null,
+    "totalSourceText": "€370.49",
+    "paymentMethod": "ACCOUNT TRANSFER",
+    "paymentMethodConfidence": null,
+    "paymentMethodSourceText": "ACCOUNT TRANSFER",
+    "cardLast4": null,
+    "cardLast4Confidence": null,
+    "cardLast4SourceText": null,
+    "lineItems": [
+      {
+        "description": "ROOM NIGHT, DOUBLE",
+        "descriptionConfidence": null,
+        "descriptionSourceText": "ROOM NIGHT, DOUBLE",
+        "quantity": "1",
+        "quantityConfidence": null,
+        "quantitySourceText": "1",
+        "unitPrice": "148.00",
+        "unitPriceConfidence": null,
+        "unitPriceSourceText": "€148.00",
+        "amount": "148.00",
+        "amountConfidence": null,
+        "amountSourceText": "€148.00"
+      },
+      {
+        "description": "BREAKFAST BUFFET",
+        "descriptionConfidence": null,
+        "descriptionSourceText": "BREAKFAST BUFFET",
+        "quantity": "2",
+        "quantityConfidence": null,
+        "quantitySourceText": "2",
+        "unitPrice": "22.50",
+        "unitPriceConfidence": null,
+        "unitPriceSourceText": "€22.50",
+        "amount": "45.00",
+        "amountConfidence": null,
+        "amountSourceText": "€45.00"
+      },
+      {
+        "description": "LAUNDRY SERVICE",
+        "descriptionConfidence": null,
+        "descriptionSourceText": "LAUNDRY SERVICE",
+        "quantity": "3",
+        "quantityConfidence": null,
+        "quantitySourceText": "3",
+        "unitPrice": "31.40",
+        "unitPriceConfidence": null,
+        "unitPriceSourceText": "€31.40",
+        "amount": "94.20",
+        "amountConfidence": null,
+        "amountSourceText": "€94.20"
+      }
+    ]
+  }
+}

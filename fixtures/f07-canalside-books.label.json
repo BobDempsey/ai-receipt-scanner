@@ -1,0 +1,96 @@
+{
+  "fixture": "f07",
+  "image": "f07-canalside-books.jpg",
+  "layout": "slip",
+  "degradations": [
+    "fade"
+  ],
+  "receipt": {
+    "isReceipt": true,
+    "reason": null,
+    "merchant": "CANALSIDE BOOKS",
+    "merchantConfidence": null,
+    "merchantSourceText": "CANALSIDE BOOKS",
+    "merchantAddress": "Keizersgracht 118, 1015 Amsterdam",
+    "merchantAddressConfidence": null,
+    "merchantAddressSourceText": "Keizersgracht 118, 1015 Amsterdam",
+    "date": "2026-03-01",
+    "dateConfidence": null,
+    "dateSourceText": "01/03/2026",
+    "time": "10:16",
+    "timeConfidence": null,
+    "timeSourceText": "10:16",
+    "currency": "EUR",
+    "currencyConfidence": null,
+    "currencySourceText": "€",
+    "subtotal": "47.85",
+    "subtotalConfidence": null,
+    "subtotalSourceText": "€47.85",
+    "taxes": [
+      {
+        "label": "BTW 9.00%",
+        "labelConfidence": null,
+        "labelSourceText": "BTW 9.00%",
+        "amount": "4.31",
+        "amountConfidence": null,
+        "amountSourceText": "€4.31"
+      }
+    ],
+    "tip": null,
+    "tipConfidence": null,
+    "tipSourceText": null,
+    "total": "52.16",
+    "totalConfidence": null,
+    "totalSourceText": "€52.16",
+    "paymentMethod": "MAESTRO",
+    "paymentMethodConfidence": null,
+    "paymentMethodSourceText": "MAESTRO",
+    "cardLast4": "6725",
+    "cardLast4Confidence": null,
+    "cardLast4SourceText": "************6725",
+    "lineItems": [
+      {
+        "description": "ATLAS OF RIVERS",
+        "descriptionConfidence": null,
+        "descriptionSourceText": "ATLAS OF RIVERS",
+        "quantity": null,
+        "quantityConfidence": null,
+        "quantitySourceText": null,
+        "unitPrice": null,
+        "unitPriceConfidence": null,
+        "unitPriceSourceText": null,
+        "amount": "28.50",
+        "amountConfidence": null,
+        "amountSourceText": "€28.50"
+      },
+      {
+        "description": "POCKET DICTIONARY",
+        "descriptionConfidence": null,
+        "descriptionSourceText": "POCKET DICTIONARY",
+        "quantity": null,
+        "quantityConfidence": null,
+        "quantitySourceText": null,
+        "unitPrice": null,
+        "unitPriceConfidence": null,
+        "unitPriceSourceText": null,
+        "amount": "12.95",
+        "amountConfidence": null,
+        "amountSourceText": "€12.95"
+      },
+      {
+        "description": "NOTEBOOK A5 LINED",
+        "descriptionConfidence": null,
+        "descriptionSourceText": "NOTEBOOK A5 LINED",
+        "quantity": null,
+        "quantityConfidence": null,
+        "quantitySourceText": null,
+        "unitPrice": null,
+        "unitPriceConfidence": null,
+        "unitPriceSourceText": null,
+        "amount": "6.40",
+        "amountConfidence": null,
+        "amountSourceText": "€6.40"
+      }
+    ]
+  }
+}

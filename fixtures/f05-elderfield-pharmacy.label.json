@@ -1,0 +1,96 @@
+{
+  "fixture": "f05",
+  "image": "f05-elderfield-pharmacy.jpg",
+  "layout": "thermal",
+  "degradations": [
+    "jpeg"
+  ],
+  "receipt": {
+    "isReceipt": true,
+    "reason": null,
+    "merchant": "ELDERFIELD PHARMACY",
+    "merchantConfidence": null,
+    "merchantSourceText": "ELDERFIELD PHARMACY",
+    "merchantAddress": "5 Prentice Arcade, Portmere PM2 8TD",
+    "merchantAddressConfidence": null,
+    "merchantAddressSourceText": "5 Prentice Arcade, Portmere PM2 8TD",
+    "date": "2026-02-11",
+    "dateConfidence": null,
+    "dateSourceText": "02/11/2026",
+    "time": "12:57",
+    "timeConfidence": null,
+    "timeSourceText": "12:57",
+    "currency": "GBP",
+    "currencyConfidence": null,
+    "currencySourceText": "£",
+    "subtotal": "27.90",
+    "subtotalConfidence": null,
+    "subtotalSourceText": "£27.90",
+    "taxes": [
+      {
+        "label": "VAT 20.00%",
+        "labelConfidence": null,
+        "labelSourceText": "VAT 20.00%",
+        "amount": "5.58",
+        "amountConfidence": null,
+        "amountSourceText": "£5.58"
+      }
+    ],
+    "tip": null,
+    "tipConfidence": null,
+    "tipSourceText": null,
+    "total": "33.48",
+    "totalConfidence": null,
+    "totalSourceText": "£33.48",
+    "paymentMethod": "VISA DEBIT",
+    "paymentMethodConfidence": null,
+    "paymentMethodSourceText": "VISA DEBIT",
+    "cardLast4": "1768",
+    "cardLast4Confidence": null,
+    "cardLast4SourceText": "************1768",
+    "lineItems": [
+      {
+        "description": "PARACETAMOL 500MG 16",
+        "descriptionConfidence": null,
+        "descriptionSourceText": "PARACETAMOL 500MG 16",
+        "quantity": "4",
+        "quantityConfidence": null,
+        "quantitySourceText": "4",
+        "unitPrice": "1.40",
+        "unitPriceConfidence": null,
+        "unitPriceSourceText": "£1.40",
+        "amount": "5.60",
+        "amountConfidence": null,
+        "amountSourceText": "£5.60"
+      },
+      {
+        "description": "PLASTERS ASSORTED 40",
+        "descriptionConfidence": null,
+        "descriptionSourceText": "PLASTERS ASSORTED 40",
+        "quantity": "0.586",
+        "quantityConfidence": null,
+        "quantitySourceText": "0.586",
+        "unitPrice": "3.25",
+        "unitPriceConfidence": null,
+        "unitPriceSourceText": "£3.25",
+        "amount": "1.90",
+        "amountConfidence": null,
+        "amountSourceText": "£1.90"
+      },
+      {
+        "description": "VITAMIN D 1000IU 90",
+        "descriptionConfidence": null,
+        "descriptionSourceText": "VITAMIN D 1000IU 90",
+        "quantity": "3",
+        "quantityConfidence": null,
+        "quantitySourceText": "3",
+        "unitPrice": "6.80",
+        "unitPriceConfidence": null,
+        "unitPriceSourceText": "£6.80",
+        "amount": "20.40",
+        "amountConfidence": null,
+        "amountSourceText": "£20.40"
+      }
+    ]
+  }
+}

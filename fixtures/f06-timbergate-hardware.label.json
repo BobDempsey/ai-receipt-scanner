@@ -1,0 +1,96 @@
+{
+  "fixture": "f06",
+  "image": "f06-timbergate-hardware.jpg",
+  "layout": "thermal",
+  "degradations": [
+    "noise"
+  ],
+  "receipt": {
+    "isReceipt": true,
+    "reason": null,
+    "merchant": "TIMBERGATE HARDWARE",
+    "merchantConfidence": null,
+    "merchantSourceText": "TIMBERGATE HARDWARE",
+    "merchantAddress": "902 Sawyers Bend, Fairhaven Bay, OR 97000",
+    "merchantAddressConfidence": null,
+    "merchantAddressSourceText": "902 Sawyers Bend, Fairhaven Bay, OR 97000",
+    "date": "2026-02-20",
+    "dateConfidence": null,
+    "dateSourceText": "02/20/2026",
+    "time": "14:34",
+    "timeConfidence": null,
+    "timeSourceText": "14:34",
+    "currency": "USD",
+    "currencyConfidence": null,
+    "currencySourceText": "$",
+    "subtotal": "22.34",
+    "subtotalConfidence": null,
+    "subtotalSourceText": "$22.34",
+    "taxes": [
+      {
+        "label": "SALES TAX 7.00%",
+        "labelConfidence": null,
+        "labelSourceText": "SALES TAX 7.00%",
+        "amount": "1.56",
+        "amountConfidence": null,
+        "amountSourceText": "$1.56"
+      }
+    ],
+    "tip": null,
+    "tipConfidence": null,
+    "tipSourceText": null,
+    "total": "23.90",
+    "totalConfidence": null,
+    "totalSourceText": "$23.90",
+    "paymentMethod": "MASTERCARD",
+    "paymentMethodConfidence": null,
+    "paymentMethodSourceText": "MASTERCARD",
+    "cardLast4": "5482",
+    "cardLast4Confidence": null,
+    "cardLast4SourceText": "************5482",
+    "lineItems": [
+      {
+        "description": "PINE BATTEN 2.4M",
+        "descriptionConfidence": null,
+        "descriptionSourceText": "PINE BATTEN 2.4M",
+        "quantity": "0.930",
+        "quantityConfidence": null,
+        "quantitySourceText": "0.930",
+        "unitPrice": "8.75",
+        "unitPriceConfidence": null,
+        "unitPriceSourceText": "$8.75",
+        "amount": "8.14",
+        "amountConfidence": null,
+        "amountSourceText": "$8.14"
+      },
+      {
+        "description": "WOOD SCREWS 100PK",
+        "descriptionConfidence": null,
+        "descriptionSourceText": "WOOD SCREWS 100PK",
+        "quantity": null,
+        "quantityConfidence": null,
+        "quantitySourceText": null,
+        "unitPrice": null,
+        "unitPriceConfidence": null,
+        "unitPriceSourceText": null,
+        "amount": "6.40",
+        "amountConfidence": null,
+        "amountSourceText": "$6.40"
+      },
+      {
+        "description": "MASKING TAPE 50M",
+        "descriptionConfidence": null,
+        "descriptionSourceText": "MASKING TAPE 50M",
+        "quantity": "2",
+        "quantityConfidence": null,
+        "quantitySourceText": "2",
+        "unitPrice": "3.90",
+        "unitPriceConfidence": null,
+        "unitPriceSourceText": "$3.90",
+        "amount": "7.80",
+        "amountConfidence": null,
+        "amountSourceText": "$7.80"
+      }
+    ]
+  }
+}

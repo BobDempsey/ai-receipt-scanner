@@ -1,0 +1,102 @@
+{
+  "fixture": "f02",
+  "image": "f02-brass-spoon-diner.jpg",
+  "layout": "thermal",
+  "degradations": [],
+  "receipt": {
+    "isReceipt": true,
+    "reason": null,
+    "merchant": "THE BRASS SPOON DINER",
+    "merchantConfidence": null,
+    "merchantSourceText": "THE BRASS SPOON DINER",
+    "merchantAddress": "64 Kettleby Street, Fairhaven Bay, OR 97000",
+    "merchantAddressConfidence": null,
+    "merchantAddressSourceText": "64 Kettleby Street, Fairhaven Bay, OR 97000",
+    "date": "2026-01-15",
+    "dateConfidence": null,
+    "dateSourceText": "01/15/2026",
+    "time": "14:28",
+    "timeConfidence": null,
+    "timeSourceText": "14:28",
+    "currency": "USD",
+    "currencyConfidence": null,
+    "currencySourceText": "$",
+    "subtotal": "29.46",
+    "subtotalConfidence": null,
+    "subtotalSourceText": "$29.46",
+    "taxes": [
+      {
+        "label": "STATE SALES TAX 6.25%",
+        "labelConfidence": null,
+        "labelSourceText": "STATE SALES TAX 6.25%",
+        "amount": "1.84",
+        "amountConfidence": null,
+        "amountSourceText": "$1.84"
+      },
+      {
+        "label": "CITY MEALS TAX 1.50%",
+        "labelConfidence": null,
+        "labelSourceText": "CITY MEALS TAX 1.50%",
+        "amount": "0.44",
+        "amountConfidence": null,
+        "amountSourceText": "$0.44"
+      }
+    ],
+    "tip": "5.89",
+    "tipConfidence": null,
+    "tipSourceText": "$5.89",
+    "total": "37.63",
+    "totalConfidence": null,
+    "totalSourceText": "$37.63",
+    "paymentMethod": "MASTERCARD",
+    "paymentMethodConfidence": null,
+    "paymentMethodSourceText": "MASTERCARD",
+    "cardLast4": "5319",
+    "cardLast4Confidence": null,
+    "cardLast4SourceText": "************5319",
+    "lineItems": [
+      {
+        "description": "BUTTERMILK PANCAKES",
+        "descriptionConfidence": null,
+        "descriptionSourceText": "BUTTERMILK PANCAKES",
+        "quantity": null,
+        "quantityConfidence": null,
+        "quantitySourceText": null,
+        "unitPrice": null,
+        "unitPriceConfidence": null,
+        "unitPriceSourceText": null,
+        "amount": "11.50",
+        "amountConfidence": null,
+        "amountSourceText": "$11.50"
+      },
+      {
+        "description": "THREE EGG OMELETTE",
+        "descriptionConfidence": null,
+        "descriptionSourceText": "THREE EGG OMELETTE",
+        "quantity": "0.997",
+        "quantityConfidence": null,
+        "quantitySourceText": "0.997",
+        "unitPrice": "13.25",
+        "unitPriceConfidence": null,
+        "unitPriceSourceText": "$13.25",
+        "amount": "13.21",
+        "amountConfidence": null,
+        "amountSourceText": "$13.21"
+      },
+      {
+        "description": "HASH BROWN SIDE",
+        "descriptionConfidence": null,
+        "descriptionSourceText": "HASH BROWN SIDE",
+        "quantity": null,
+        "quantityConfidence": null,
+        "quantitySourceText": null,
+        "unitPrice": null,
+        "unitPriceConfidence": null,
+        "unitPriceSourceText": null,
+        "amount": "4.75",
+        "amountConfidence": null,
+        "amountSourceText": "$4.75"
+      }
+    ]
+  }
+}

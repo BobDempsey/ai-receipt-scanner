@@ -1,0 +1,96 @@
+{
+  "fixture": "f10",
+  "image": "f10-aldergrove-supply.jpg",
+  "layout": "invoice",
+  "degradations": [
+    "perspective"
+  ],
+  "receipt": {
+    "isReceipt": true,
+    "reason": null,
+    "merchant": "ALDERGROVE SUPPLY WORKS",
+    "merchantConfidence": null,
+    "merchantSourceText": "ALDERGROVE SUPPLY WORKS",
+    "merchantAddress": "Unit 3 Faldon Estate, Portmere PM5 2QN",
+    "merchantAddressConfidence": null,
+    "merchantAddressSourceText": "Unit 3 Faldon Estate, Portmere PM5 2QN",
+    "date": "2026-03-28",
+    "dateConfidence": null,
+    "dateSourceText": "2026-03-28",
+    "time": "10:20",
+    "timeConfidence": null,
+    "timeSourceText": "10:20",
+    "currency": "GBP",
+    "currencyConfidence": null,
+    "currencySourceText": "£",
+    "subtotal": "75.30",
+    "subtotalConfidence": null,
+    "subtotalSourceText": "£75.30",
+    "taxes": [
+      {
+        "label": "VAT 20.00%",
+        "labelConfidence": null,
+        "labelSourceText": "VAT 20.00%",
+        "amount": "15.06",
+        "amountConfidence": null,
+        "amountSourceText": "£15.06"
+      }
+    ],
+    "tip": null,
+    "tipConfidence": null,
+    "tipSourceText": null,
+    "total": "90.36",
+    "totalConfidence": null,
+    "totalSourceText": "£90.36",
+    "paymentMethod": "ACCOUNT TRANSFER",
+    "paymentMethodConfidence": null,
+    "paymentMethodSourceText": "ACCOUNT TRANSFER",
+    "cardLast4": null,
+    "cardLast4Confidence": null,
+    "cardLast4SourceText": null,
+    "lineItems": [
+      {
+        "description": "A4 COPY PAPER, BOX OF 5",
+        "descriptionConfidence": null,
+        "descriptionSourceText": "A4 COPY PAPER, BOX OF 5",
+        "quantity": "0.994",
+        "quantityConfidence": null,
+        "quantitySourceText": "0.994",
+        "unitPrice": "21.80",
+        "unitPriceConfidence": null,
+        "unitPriceSourceText": "£21.80",
+        "amount": "21.67",
+        "amountConfidence": null,
+        "amountSourceText": "£21.67"
+      },
+      {
+        "description": "TONER CARTRIDGE, BLACK",
+        "descriptionConfidence": null,
+        "descriptionSourceText": "TONER CARTRIDGE, BLACK",
+        "quantity": "0.789",
+        "quantityConfidence": null,
+        "quantitySourceText": "0.789",
+        "unitPrice": "64.50",
+        "unitPriceConfidence": null,
+        "unitPriceSourceText": "£64.50",
+        "amount": "50.89",
+        "amountConfidence": null,
+        "amountSourceText": "£50.89"
+      },
+      {
+        "description": "LEVER ARCH FILE",
+        "descriptionConfidence": null,
+        "descriptionSourceText": "LEVER ARCH FILE",
+        "quantity": "0.842",
+        "quantityConfidence": null,
+        "quantitySourceText": "0.842",
+        "unitPrice": "3.25",
+        "unitPriceConfidence": null,
+        "unitPriceSourceText": "£3.25",
+        "amount": "2.74",
+        "amountConfidence": null,
+        "amountSourceText": "£2.74"
+      }
+    ]
+  }
+}
