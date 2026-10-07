@@ -1,0 +1,10 @@
+/* The band is the last thing before the footer, so it needs to read as a close
+   rather than as one more section. A tinted surface and a border above it do that
+   without a second accent colour: the tint is the primary colour's own light
+   variant, which already clears contrast against the text sitting on it in both
+   themes. */
+
+.band {
+  border-top: rem(1px) solid var(--mantine-color-default-border);
+  background-color: var(--mantine-primary-color-light);
+}

@@ -1,0 +1,52 @@
+/* The nav is fixed for the whole scroll, which is what the portfolio baseline
+   asks for. `globals.css` reserves `--nav-height` as padding on the body, so the
+   hero starts under the bar rather than behind it. */
+
+.root {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 200;
+  height: var(--nav-height);
+  display: flex;
+  align-items: center;
+  background-color: var(--mantine-color-body);
+  border-bottom: rem(1px) solid var(--mantine-color-default-border);
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-sm);
+  width: 100%;
+}
+
+/* The project name links home. It carries the headline's tight tracking so the
+   bar reads as part of the same page rather than as a separate strip. */
+.brand {
+  font-weight: 650;
+  letter-spacing: var(--headline-tracking);
+  color: var(--mantine-color-text);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.brand:hover {
+  color: var(--mantine-primary-color-filled);
+}
+
+/* On a phone the bar keeps the name, the action and both icons, so the action
+   loses its label padding rather than the bar losing a control. */
+.action {
+  white-space: nowrap;
+}
+
+/* A plain link falls back to the browser's own one pixel outline, which is
+   visible but is not the ring every other control on the site draws. The brand
+   takes the same two pixel ring so a keyboard visitor sees one shape all the way
+   down the page. */
+.brand:focus-visible {
+  outline: rem(2px) solid var(--mantine-primary-color-filled);
+  outline-offset: rem(2px);
+  border-radius: var(--mantine-radius-sm);
+}

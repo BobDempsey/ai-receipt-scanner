@@ -1,0 +1,22 @@
+/* The footer sits on every page and shares the site's content width, so its
+   first and last characters line up with the sections above it. */
+
+.root {
+  margin-top: var(--mantine-spacing-xl);
+  border-top: rem(1px) solid var(--mantine-color-default-border);
+  padding-block: var(--mantine-spacing-lg);
+}
+
+.inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-sm);
+}
+
+.links {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-md);
+}

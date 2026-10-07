@@ -1,0 +1,44 @@
+/* The numbered chip. It carries the accent, which is the one colour the whole
+   site accents with, and it is a circle sized off the font rather than off a
+   pixel value so it stays round when a visitor enlarges text. */
+
+.number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: rem(32px);
+  height: rem(32px);
+  border-radius: 50%;
+  background-color: var(--mantine-primary-color-filled);
+  color: var(--mantine-primary-color-contrast);
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A card is a panel rather than a paragraph under a small heading, which is what
+   the portfolio baseline asks of the sections below the hero. The full height
+   makes every card in a row end level however long its text runs. */
+
+.card {
+  height: 100%;
+}
+
+/* The hover lift the portfolio baseline asks for. It sits behind the
+   reduced-motion query, so the declaration is absent for a visitor who asked for
+   less rather than overridden later, and a transition carries it rather than an
+   animation, so nothing moves on the first paint. */
+
+@media (prefers-reduced-motion: no-preference) {
+  .card {
+    transition:
+      transform 160ms ease,
+      box-shadow 160ms ease;
+  }
+
+  .card:hover {
+    transform: translateY(rem(-3px));
+    box-shadow: var(--mantine-shadow-md);
+  }
+}

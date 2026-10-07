@@ -1,5 +1,26 @@
 /* Mantine's own styles carry the reset and every token this app paints with.
-   What is left here is the full-height frame the two-pane workspace fills. */
+   What is left here is the frame the two-pane workspace fills, plus the handful
+   of measurements the landing page, the About page and the app all share. */
+
+:root {
+  /* One content width for the nav, the footer, the workspace and every section
+     below it, so the three pages start and end at the same horizontal position.
+     1152px holds the workspace's two panes at a laptop width without either
+     pane dropping under the 768px breakpoint that stacks them. */
+  --content-max: 72rem;
+
+  /* The prose measure the baseline asks for, about 65 characters a line. */
+  --prose-measure: 65ch;
+
+  /* The headline scale. Tight tracking against base body text, and a clamp so a
+     phone gets a headline that still fits above the picker. */
+  --headline-1: clamp(2rem, 6vw, 3rem);
+  --headline-2: clamp(1.5rem, 3.5vw, 1.875rem);
+  --headline-tracking: -0.02em;
+
+  /* The fixed nav's height, which is also the padding the page owes it. */
+  --nav-height: 3.5rem;
+}
 
 html,
 body {
@@ -9,4 +30,77 @@ body {
 #__next,
 body > div {
   min-height: 100%;
+}
+
+/* The nav is fixed, so the page reserves its height rather than sliding under it. */
+body {
+  padding-top: var(--nav-height);
+}
+
+/* Tight tracking on the headline scale. Mantine's theme carries the sizes and the
+   line heights; letter spacing has no theme slot, so it is set here once. */
+:where(h1, h2, h3, .mantine-Title-root) {
+  letter-spacing: var(--headline-tracking);
+}
+
+/* The nav's main action jumps to the picker, so an anchor target clears the bar
+   rather than landing under it. */
+:target {
+  scroll-margin-top: calc(var(--nav-height) + var(--mantine-spacing-md));
+}
+
+/* Mantine's own dimmed text misses the 4.5 to 1 the baseline asks for: gray 6
+   measures 3.32 to 1 against the white body and dark 2 measures 4.04 to 1 against
+   the #242424 dark one, and the hero's lede and the storage policy are both
+   dimmed. One step darker in light and one step lighter in dark clears it.
+
+   The selectors carry `:root` because Mantine writes its own value at
+   `:root[data-mantine-color-scheme="…"]`, which outranks a bare attribute
+   selector. `ColorSchemeScript` sets that attribute before the first paint, so
+   both branches are decided by then. */
+:root[data-mantine-color-scheme="light"] {
+  --mantine-color-dimmed: var(--mantine-color-gray-7);
+}
+
+:root[data-mantine-color-scheme="dark"] {
+  --mantine-color-dimmed: var(--mantine-color-dark-1);
+}
+
+/* Motion is decoration, and every rule for it sits behind this query. A visitor
+   who asked for reduced motion gets the final state of the page with nothing to
+   opt out of, because the declarations themselves are absent rather than
+   overridden.
+
+   The reveal runs on a view timeline, so the scroll drives it and no observer and
+   no script can fail. Nothing runs on the first paint either: a section already on
+   screen when the page loads holds the position its scroll offset gives it rather
+   than playing from a start state.
+
+   The start state is visible. A section waiting to reveal sits at 88 percent
+   opacity half a line low, which reads perfectly well, so a browser without
+   `animation-timeline` and an animation that never fires both leave the content in
+   place. The `@supports` guard states that fallback rather than leaving it to
+   chance. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    @keyframes site-reveal {
+      from {
+        opacity: 0.88;
+        transform: translateY(0.75rem);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* A global class rather than a module one, so the keyframes are defined once
+       and every section below the hero reads the same rule. */
+    .reveal {
+      animation: site-reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 10% entry 70%;
+    }
+  }
 }

@@ -1,0 +1,40 @@
+/* A screenshot is a control, because clicking it opens the full size copy, so it
+   takes the same two pixel focus ring the buttons and the field panel's cells
+   already draw rather than the browser's default outline. */
+
+.trigger {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+  border-radius: var(--mantine-radius-sm);
+  overflow: hidden;
+}
+
+.trigger:focus-visible {
+  outline: rem(2px) solid var(--mantine-primary-color-filled);
+  outline-offset: rem(2px);
+}
+
+/* The capture is wider than it is tall and the two sit side by side on a wide
+   screen, so the image scales to the column rather than the column to the image. */
+
+.shot {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: rem(1px) solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-sm);
+}
+
+/* Inside the modal the capture is shown at its own pixel size where the window
+   allows it, and scrolls rather than shrinking where it does not, because a
+   screenshot opened full size exists to be read. */
+
+.full {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}

@@ -1145,19 +1145,19 @@ export function ReceiptWorkspace() {
   );
 
   return (
-    <Container size="xl" py="xl">
-      <Stack gap="lg">
-        <Stack gap="xs">
+    <Container size="var(--content-max)" pt="sm" pb="xl">
+      <Stack gap="md">
+        <Stack gap={4}>
           <Title order={1} className={classes.headline}>
             Read a receipt into fields you can keep
           </Title>
-          <Text c="dimmed" maw="65ch">
-            Pick a photograph of a receipt, or a PDF of one. One model call reads it into typed
-            fields and its line items, the app checks the answer against its own
-            schema and its own arithmetic, and you correct any value in place.
-            The app rechecks the arithmetic on every correction, and the JSON
-            download carries the values you have, the warnings and the fields you
-            typed.
+          {/* Short on purpose. The hero's job is the picker and the samples under
+              it, both of which have to sit above the fold beneath the fixed nav,
+              so the pipeline is described by the step cards further down the page
+              rather than by a paragraph standing on top of the app. */}
+          <Text c="dimmed" className={classes.lede}>
+            Pick a photograph or a PDF. One model call reads it into typed fields,
+            the app checks the arithmetic, you correct the rest.
           </Text>
         </Stack>
 
@@ -1171,7 +1171,12 @@ export function ReceiptWorkspace() {
                 value={file}
                 onChange={choose}
                 clearable
+                /* `clearable` adds a close button Mantine leaves unnamed, so the
+                   accessibility tree announced a button with nothing in it once a
+                   visitor chose a file. */
+                clearButtonProps={{ "aria-label": "Clear the chosen receipt file" }}
                 className={classes.picker}
+                classNames={{ input: classes.pickerInput }}
               />
               <Button
                 onClick={() => void extract()}
@@ -1180,8 +1185,12 @@ export function ReceiptWorkspace() {
                 Extract the fields
               </Button>
             </Group>
-            <Text c="dimmed" size="sm" maw="65ch">
-              The app keeps nothing on the server. Your upload lives in memory for
+            {/* The storage policy stays beside the picker and readable before a
+                file is chosen, which is what the receipt-workspace spec asks for.
+                It is tighter than it was, and it still names every place a byte
+                could go. */}
+            <Text c="dimmed" size="sm" className={classes.lede}>
+              The app keeps nothing on the server: your upload lives in memory for
               the length of the request and reaches no disk and no database. This
               session&apos;s receipts live in this browser, survive a reload and end
               when you close the tab.
@@ -1383,12 +1392,12 @@ export function ReceiptWorkspace() {
                       role="status"
                       size="xs"
                       c={copied.note.ok ? "teal" : "red"}
-                      maw="65ch"
+                      maw="var(--prose-measure)"
                     >
                       {copied.note.message}
                     </Text>
                   ) : null}
-                  <Text c="dimmed" size="xs" maw="65ch">
+                  <Text c="dimmed" size="xs" maw="var(--prose-measure)">
                     This session&apos;s receipts live in this browser, survive a
                     reload and end when you close the tab, and nothing about them
                     reaches the server. A download or a copy is how a corrected

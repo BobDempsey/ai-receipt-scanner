@@ -70,15 +70,32 @@
   min-width: rem(220px);
 }
 
+/* The headline reads its size and its tracking off the shared tokens in
+   `globals.css`, so the landing page, the About page and the app all scale
+   together. The clamp is what keeps the hero's picker and samples above the fold
+   on a phone, where a fixed 40 pixels pushed them under it. */
+
 .headline {
-  font-size: rem(40px);
-  letter-spacing: rem(-1px);
+  font-size: var(--headline-1);
+  letter-spacing: var(--headline-tracking);
   line-height: 1.1;
   text-wrap: balance;
 }
 
-@media (min-width: $mantine-breakpoint-sm) {
-  .headline {
-    font-size: rem(48px);
-  }
+/* The prose measure, about 65 characters, as one token rather than a literal
+   repeated beside every paragraph. */
+
+.lede {
+  max-width: var(--prose-measure);
+  text-wrap: pretty;
+}
+
+/* The picker's own control is a button wearing Mantine's input styles, so neither
+   the button's focus ring nor an input's focus border reaches it and a keyboard
+   visitor saw nothing at all on the first control in the hero. It takes the same
+   two pixel ring the field panel's cells and the session table's rows draw. */
+
+.pickerInput:focus-visible {
+  outline: rem(2px) solid var(--mantine-primary-color-filled);
+  outline-offset: rem(1px);
 }

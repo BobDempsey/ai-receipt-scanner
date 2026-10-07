@@ -1,0 +1,33 @@
+/* The figure is the thing a visitor reads from across the room, so it takes a
+   display size of its own rather than a heading level, and tabular numerals keep
+   a row of tiles aligned when one figure is 4 and the next is 40. */
+
+.figure {
+  font-size: rem(44px);
+  line-height: 1.05;
+  font-weight: 700;
+  letter-spacing: rem(-1px);
+  font-variant-numeric: tabular-nums;
+  color: var(--mantine-primary-color-filled);
+}
+
+.tile {
+  height: 100%;
+}
+
+/* The same hover lift the step cards carry, behind the same query. A tile is a
+   panel rather than a control, so the lift is the only thing that answers a
+   pointer and nothing about it changes what the tile says. */
+
+@media (prefers-reduced-motion: no-preference) {
+  .tile {
+    transition:
+      transform 160ms ease,
+      box-shadow 160ms ease;
+  }
+
+  .tile:hover {
+    transform: translateY(rem(-3px));
+    box-shadow: var(--mantine-shadow-md);
+  }
+}
