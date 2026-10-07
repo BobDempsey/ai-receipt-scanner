@@ -5,6 +5,7 @@ import {
   List,
   ListItem,
   Paper,
+  SimpleGrid,
   Stack,
   Table,
   TableScrollContainer,
@@ -16,7 +17,14 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import { FAILURE_CASES, SITE_FIGURES } from "@/lib/project-facts";
+import {
+  ACCURACY_CAVEAT,
+  ACCURACY_FIGURE_IDS,
+  ACCURACY_RUN,
+  FAILURE_CASES,
+  SITE_FIGURES,
+  figureById,
+} from "@/lib/project-facts";
 import { AUTHOR_URL, REPOSITORY_URL } from "@/components/site-links";
 
 /**
@@ -118,13 +126,59 @@ export default function AboutPage() {
         </Stack>
 
         <Stack gap="sm">
+          <Title order={2}>How well it reads a receipt</Title>
+          <Text maw="var(--prose-measure)">
+            {ACCURACY_RUN.fixtureCount} labelled receipts went through the same extraction
+            this page describes on {ACCURACY_RUN.runDate}, against {ACCURACY_RUN.model}, with
+            nothing stubbed and nothing retried. {ACCURACY_CAVEAT} The label of each fixture was
+            written in the same run that drew its image, so no expectation was typed by hand,
+            and {ACCURACY_RUN.report} in the repository holds the per-field and per-fixture
+            rows behind every number below.
+          </Text>
+          <SimpleGrid cols={{ base: 1, xs: 3 }} spacing="md">
+            {ACCURACY_FIGURE_IDS.map((id) => figureById(id)).map((figure) => (
+              <Paper key={figure.id} withBorder radius="md" p="md">
+                <Text component="p" fw={700} size="xl">
+                  {figure.figure}
+                </Text>
+                <Text fw={600} size="sm">
+                  {figure.label}
+                </Text>
+              </Paper>
+            ))}
+          </SimpleGrid>
+          <Text maw="var(--prose-measure)">
+            {figureById("field-accuracy").figure} is 1,662 of 1,684 compared fields, and the 22
+            misses are worth more than the headline. The app read the printed total on all{" "}
+            {ACCURACY_RUN.fixtureCount} fixtures. It read 34 of the {ACCURACY_RUN.fixtureCount}{" "}
+            dates, which makes <Text span ff="monospace">date</Text> the weakest field in the
+            set: every one of those six misses prints a day of 12 or under, so 05/06 is a
+            genuinely ambiguous string and the model answered with the other day-month
+            reading. The eight fixtures printing an ISO date read 8 of 8. Five more misses are
+            a payment method the paper prints as CASH and the model returned as Cash, which
+            this site counts as wrong rather than widening the comparison to flatter the
+            figure; a reader who discounts capitals gets 99.0%. The remaining eleven are a tax
+            line the model invented on two fixtures, two short merchant addresses, a wrong
+            digit in a third, and four single-character slips inside line items.
+          </Text>
+          <Text maw="var(--prose-measure)">
+            One thing this run does not show is the damage mattering. Every degradation scored
+            between 98.2% and 98.8% against 99.0% for the clean renders, so drawn fading and
+            drawn blur are not what a creased till roll in a hot car does to the page. The
+            first run of this harness reported 76.6%, and the fault was the labels rather than
+            the model: the generator disagreed with itself about whether a layout prints a
+            quantity column, so 374 item cells were compared against a value the paper never
+            printed. One predicate now answers that question for both the drawing and the
+            label, and {ACCURACY_RUN.report} keeps both runs.
+          </Text>
+        </Stack>
+
+        <Stack gap="sm">
           <Title order={2}>The figures on this site</Title>
           <Text maw="var(--prose-measure)">
-            Each one is read out of the constant the app enforces, so a cap that changes
-            changes this table, the tiles on the front page and the README together. No
-            accuracy percentage appears yet. Measuring the extraction against labelled
-            receipts is the next piece of work, and it will land that number in all three
-            places at once rather than in one of them.
+            The three measured figures carry the run above. Every other one is read out of the
+            constant the app enforces, so a cap that changes changes this table, the tiles on
+            the front page and the README together.
           </Text>
           <TableScrollContainer minWidth={420}>
             <Table striped withTableBorder verticalSpacing="sm">

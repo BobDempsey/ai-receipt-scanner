@@ -6,6 +6,8 @@
 
 Hand it a photograph or a PDF of a receipt and it returns twelve typed fields, the line items among them, each value carrying the model's confidence and the characters it was read from. Click a field and the app draws a rectangle over the place on the image it came from. The arithmetic is checked in code, so a receipt whose items do not reach its printed subtotal says so instead of quietly balancing. Everything is editable where it sits, and the data leaves as JSON or CSV.
 
+On 40 labelled fixtures it read 98.7% of fields correctly, every printed total, and 34 of the 40 dates. The dates are the weak spot and the section below says why.
+
 There is no chat box. You give it a receipt, it gives you data, and it shows its working at every step so you can tell a reading from a guess.
 
 ## Stack
@@ -78,14 +80,37 @@ Each one is read out of a constant the app enforces. `lib/project-facts.ts` is t
 | 0.72 | match score a highlight needs | `MATCH_THRESHOLD` in `lib/highlight-match.ts` |
 | 0.8 | confidence that flags a field for review | `REVIEW_THRESHOLD` in `lib/receipt-fields.ts` |
 | 1 | model call per receipt | `EXTRACTION_MODEL` in `lib/model.ts` |
+| 98.7% | of fields read correctly | the run in `fixtures/REPORT.md` |
+| 100.0% | of totals read correctly | the `total` row of `fixtures/REPORT.md` |
+| 85.0% | of dates read correctly | the `date` row of `fixtures/REPORT.md` |
 
-No accuracy percentage appears here yet. Measuring the extraction against labelled receipts is the next piece of work, and it lands that number in this README, the About page and the landing page's stat tiles in one change rather than in one of them.
+## How well it reads a receipt
+
+40 labelled receipts went through the same extraction on 2026-10-07, against `gpt-6.1-sol`, with the rate limiter the one deliberate omission and nothing else stubbed, cached or retried. Each fixture's label was written in the same run that drew its image, so no expectation was typed by hand. The 40 fixtures are drawn and then damaged in code rather than photographed, so synthetic fading is not thermal paper and the set carries no handwriting and no language but English. `fixtures/REPORT.md` holds the per-field and per-fixture rows behind every figure here.
+
+| Figure | Value | Matched | Compared |
+| --- | --- | --- | --- |
+| of fields read correctly | 98.7% | 1662 | 1684 |
+| of totals read correctly | 100.0% | 40 | 40 |
+| of dates read correctly | 85.0% | 34 | 40 |
+
+98.7% is 1,662 of 1,684 compared fields, and the 22 misses say more than the headline does. The app read the printed total on all 40 fixtures. It read 34 of the 40 dates, which makes `date` the weakest field in the set: all six misses print a day of 12 or under, so 05/06 is a genuinely ambiguous string and the model answered with the other day-month reading. Nothing on the paper says which convention it used and the app sends no locale with the image, so this is a real limit rather than a damaged-image failure. The eight fixtures printing an ISO date read 8 of 8.
+
+Five more misses are a payment method the paper prints as `CASH` and the model returned as `Cash`. `lib/accuracy.ts` folds case for the merchant name and an item description alone, so that counts as wrong rather than widening the comparison to flatter the figure, and a reader who discounts capitals gets 99.0%. The remaining eleven are a tax line the model invented on two fixtures, two merchant addresses read short, a wrong digit in a third, and four single-character slips inside line items.
+
+The damage barely separates the fixtures. Every degradation row sits between 98.2% and 98.8% against 99.0% for the four clean renders, which is the clearest sign that drawn fading is not what a month in a hot car does to thermal paper. The first run of this harness reported 76.6%, and the fault was the labels rather than the model: the generator disagreed with itself about whether a layout prints a quantity column, so 374 item cells were compared against values the paper never printed. One predicate now answers that question for both the drawing and the label, and the report keeps both runs.
+
+Two thresholds were judged against the same run. `MATCH_THRESHOLD` stays at 0.72, where the matcher showed 1,125 correct highlights and withheld none at all. `REVIEW_THRESHOLD` stays at 0.8, and the evidence is that it never fires: not one of the 1,684 fields came back under it, and the lowest confidence reported anywhere was 0.9.
+
+Rerun it with `node scripts/measure-accuracy.mjs`, which needs `OPENAI_API_KEY` and spends 40 real model calls. Nothing in `npm test` or `npm run build` calls the model. A model swap or a prompt change reruns the fixtures and moves this README, the About page and the landing page's stat tiles in the same change.
 
 ## Where it reads badly
 
 Every case below is one you can reproduce against the live demo. They are listed because a demo that only shows its good path tells you nothing you can check.
 
-**Faded thermal paper.** A till receipt that has spent a month in a hot car prints grey on grey. The model guesses at the digits, and the OCR pass that draws the highlight finds no words at all, so a wrong figure can arrive with no mark beside it to check it against.
+**A date whose day could be its month.** This is the measured weakest field: `date` read 34 of 40 on the fixture run, and all six misses are the same mistake. Each prints a day of 12 or under, so 05/06 is genuinely either the fifth of June or the sixth of May, and the model answered with the other reading. The app sends no locale with the image and will not guess one on your behalf. The eight fixtures printing an ISO date read 8 of 8, so a slash-separated date is the one to check before you export.
+
+**Faded thermal paper.** A till receipt that has spent a month in a hot car prints grey on grey. The model guesses at the digits, and the OCR pass that draws the highlight finds no words at all, so a wrong figure can arrive with no mark beside it to check it against. The fixture run does not measure this case: its fading is drawn in code and the faded fixtures scored 98.4%, close to the clean renders, so real thermal paper is worse than any figure in this README.
 
 **Handwriting.** A total written in by hand, or a tip scrawled on a card slip, reads badly. Printed type is what the model and the OCR pass both handle well, and the word boxes OCR returns for cursive rarely match the value the model read.
 
@@ -93,13 +118,15 @@ Every case below is one you can reproduce against the live demo. They are listed
 
 **A PDF past its first page.** The app rasterizes page one and stops there. A two-page invoice loses everything on page two, and the document pane says which page of how many it read rather than hiding the gap.
 
-**Receipts not printed in English.** The prompt is written in English. Amounts and dates usually survive, and the currency code often does, but a merchant name in another script can come back as an English guess at it.
+**Receipts not printed in English.** The prompt is written in English. Amounts and dates usually survive, and the currency code often does, but a merchant name in another script can come back as an English guess at it. The fixture set says nothing either way, because every fixture in it prints English.
 
 **A receipt whose own arithmetic is wrong.** The checks compare figures printed on the page, so a receipt that rounds its own tax line raises the same warning a misread digit raises. The app names the difference and leaves the judgment to the reader, because it cannot tell those two apart and will not rewrite a number to close the gap.
 
-**The review flag is barely exercised.** `gpt-6.1-sol`, the model this app is pinned to, has not yet reported a confidence under 0.8 on anything uploaded to the deployed app, including a deliberately degraded image. The flag rests on unit tests until labelled fixtures measure whether the model ever reports a useful middle confidence.
+**The review flag is barely exercised.** `gpt-6.1-sol`, the model this app is pinned to, has not reported a confidence under 0.8 on anything uploaded to the deployed app, and the fixture run confirms it: not one of the 1,684 compared fields came back under the line, the lowest confidence reported anywhere was 0.9, and every field the model read wrong reported 0.93 or above. On this set the model's own confidence predicts nothing about whether a value is right, so the flag is a mechanism waiting for a model that uses it rather than a signal to lean on.
 
 **A missing highlight is not a missing field.** When no run of words scores above 0.72 against what the model says it read, the app marks nothing rather than marking the wrong region. A correct field can sit on the page with no mark, and the pane says which of the two reasons applies.
+
+**A mark can land on the wrong words.** The threshold refuses a poor match. It has no way to refuse a confident mistake. Over 1,251 measured samples the shipped 0.72 lost no correct mark and admitted 37 wrong ones, and 29 of those 37 are `currency`: asked which characters it read the symbol from, the model often answers with the symbol and a whole address line, so the matcher finds exactly those words and marks the address. 25 of the wrong marks scored a perfect 1, which no threshold can refuse. The fix belongs in the prompt.
 
 ## The session table and the exports
 

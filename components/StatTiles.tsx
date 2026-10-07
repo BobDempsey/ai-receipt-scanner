@@ -1,5 +1,5 @@
 import { Container, Paper, SimpleGrid, Stack, Text, Title } from "@mantine/core";
-import { STAT_TILES } from "@/lib/project-facts";
+import { ACCURACY_RUN, STAT_TILES } from "@/lib/project-facts";
 import classes from "./StatTiles.module.css";
 
 /**
@@ -11,9 +11,11 @@ import classes from "./StatTiles.module.css";
  * About page quotes the same list, which is what the baseline means by holding
  * the figures equal across the page, the About page and the README.
  *
- * No accuracy percentage sits here. Measuring the extraction against labelled
- * fixtures is the next slice, and that slice writes the result into all three
- * places in one change.
+ * The first three tiles are measured rather than read off a constant. The copy
+ * above the grid names the run date, the model and the report, and each measured
+ * tile says what the set was, because a percentage with no run behind it is what
+ * the accuracy spec forbids. Six tiles sit as two rows of three; the figures that
+ * came out of the row are still in the About page table and in the README.
  *
  * A server component, for the reason `lib/project-facts.ts` records.
  */
@@ -22,15 +24,17 @@ export function StatTiles() {
     <Container size="var(--content-max)" py="xl" component="section" className="reveal">
       <Stack gap="lg">
         <Stack gap="xs">
-          <Title order={2}>What the app reads, and how much of it</Title>
+          <Title order={2}>What the app reads, and how often it reads it right</Title>
           <Text c="dimmed" maw="var(--prose-measure)">
-            Each figure below is read out of the code that enforces it, so a cap that
-            changes changes this row with it. Accuracy is not among them yet, because
-            nothing has measured it against labelled receipts.
+            The first three figures were measured on {ACCURACY_RUN.runDate} against{" "}
+            {ACCURACY_RUN.model}, over {ACCURACY_RUN.fixtureCount} labelled fixtures, and the
+            run is written down fixture by fixture in {ACCURACY_RUN.report}. Each tile says
+            what the set was. The other three are read out of the code that enforces them, so
+            a cap that changes changes this row with it.
           </Text>
         </Stack>
 
-        <SimpleGrid cols={{ base: 1, xs: 2, lg: 4 }} spacing="md">
+        <SimpleGrid cols={{ base: 1, xs: 2, lg: 3 }} spacing="md">
           {STAT_TILES.map((tile) => (
             <Paper key={tile.id} withBorder radius="md" p="md" className={classes.tile}>
               <Stack gap={4}>

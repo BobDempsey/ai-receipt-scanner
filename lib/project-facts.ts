@@ -21,6 +21,12 @@ import { SESSION_EXTRACTION_CAP } from "./session-count";
  * `SESSION_EXTRACTION_CAP` from 40 changes the tile, the About page and the
  * unit test together, and the one thing left to do by hand is the README line.
  *
+ * The three accuracy figures have no constant to read, because a measurement is
+ * not a setting. They read their run date, their model and their report out of
+ * `ACCURACY_RUN` instead, so a rerun edits that one object and every figure, its
+ * date and its provenance move with it. A figure stating a percentage without
+ * that stamp fails the unit test rather than reaching a tile.
+ *
  * This module imports `lib/extract-receipt.ts`, which pulls in the OpenAI SDK,
  * so nothing that reads it may be a client component. The three components that
  * render it (`StepCards`, `StatTiles`, `ActionBand`) and the About page are all
@@ -105,6 +111,41 @@ export const PICKER_FORMAT_SENTENCE = [
 /** The file size cap in whole megabytes, from `MAX_FILE_BYTES`. */
 export const MAX_FILE_MEGABYTES = MAX_FILE_BYTES / (1024 * 1024);
 
+/**
+ * The one run every published accuracy figure comes from.
+ *
+ * The run date and the model are written here once and read by all three
+ * figures, so a rerun edits one object rather than three strings, and the model
+ * is `EXTRACTION_MODEL` itself rather than its name typed again. A figure that
+ * quotes a model the app no longer calls is the thing the accuracy spec forbids,
+ * and this is what makes that impossible to do by accident.
+ *
+ * `fixtureCount` is the size of the set `scripts/measure-accuracy.mjs` ran over.
+ * It is a literal rather than a count of `fixtures/`, because this module is
+ * bundled for a page and cannot read the filesystem; `lib/fixtures.test.ts`
+ * is what holds the set to that number.
+ */
+export const ACCURACY_RUN = {
+  /** The date `fixtures/REPORT.md` records for the run, ISO, no timezone. */
+  runDate: "2026-10-07",
+  /** The model the run measured, which is the one the route calls. */
+  model: EXTRACTION_MODEL,
+  /** How many labelled fixtures the run covered. */
+  fixtureCount: 40,
+  /** Where the run is written down, for a reader who wants the per-fixture rows. */
+  report: "fixtures/REPORT.md",
+} as const;
+
+/**
+ * The caveat that travels with every accuracy figure.
+ *
+ * The accuracy spec requires each place stating a figure to say the damage is
+ * applied in code rather than photographed, so the sentence lives here and the
+ * tiles, the About page and the README all print this one. Saying it once per
+ * place is the difference between a measured claim and a marketing number.
+ */
+export const ACCURACY_CAVEAT = `The ${ACCURACY_RUN.fixtureCount} fixtures are drawn and then damaged in code rather than photographed, so synthetic fading is not thermal paper and the set carries no handwriting and no language but English.`;
+
 export type SiteFigure = {
   /** A stable key, which is how the landing page picks the tiles it shows. */
   id: string;
@@ -116,18 +157,69 @@ export type SiteFigure = {
   detail: string;
   /** Where the figure comes from, for whoever changes it next. */
   source: string;
+  /**
+   * The run behind a measured figure, absent on a figure read off a constant.
+   *
+   * Only a figure carrying this may state a percentage or call itself accuracy.
+   * `lib/project-facts.test.ts` enforces that both ways, which is what stops an
+   * unmeasured number reaching a tile.
+   */
+  measured?: {
+    /** The run date, ISO. */
+    runDate: string;
+    /** The model id the figure was measured against. */
+    model: string;
+    /** The report the figure can be traced to. */
+    report: string;
+  };
 };
+
+/** The run stamp every measured figure carries, built once from `ACCURACY_RUN`. */
+const MEASURED = {
+  runDate: ACCURACY_RUN.runDate,
+  model: ACCURACY_RUN.model,
+  report: ACCURACY_RUN.report,
+} as const;
+
+/** The ids of the three figures the accuracy spec requires every place to state. */
+export const ACCURACY_FIGURE_IDS = [
+  "field-accuracy",
+  "total-accuracy",
+  "date-accuracy",
+] as const;
 
 /**
  * Every figure this site states, in the order the About page lists them.
  *
- * No accuracy percentage appears here. Measuring the extraction against labelled
- * fixtures is the next slice, and that slice writes the result into the tiles,
- * the About page and the README in one change. A tile reading "coming soon"
- * would be worse than a tile reading something true, so until then the site
- * quotes what the code already settles.
+ * The three measured figures lead, because they are the ones a reader came for
+ * and the ones that need their run named beside them. Each carries `measured`,
+ * so the figure, the date, the model and the report move together.
  */
 export const SITE_FIGURES: readonly SiteFigure[] = [
+  {
+    id: "field-accuracy",
+    figure: "98.7%",
+    label: "of fields read correctly",
+    detail: `1,662 of 1,684 compared fields matched their label across the ${ACCURACY_RUN.fixtureCount} fixtures, measured on ${ACCURACY_RUN.runDate} against ${ACCURACY_RUN.model}. ${ACCURACY_CAVEAT} Twenty-two fields came back wrong and ${ACCURACY_RUN.report} names every one of them.`,
+    source: `The run in ${ACCURACY_RUN.report}, from scripts/measure-accuracy.mjs over lib/accuracy.ts`,
+    measured: MEASURED,
+  },
+  {
+    id: "total-accuracy",
+    figure: "100.0%",
+    label: "of totals read correctly",
+    detail: `The app read the printed total on all ${ACCURACY_RUN.fixtureCount} fixtures, 40 of 40. It is broken out beside the date because those are the two values a person checks first.`,
+    source: `The \`total\` row of ${ACCURACY_RUN.report}, compared by lib/accuracy.ts`,
+    measured: MEASURED,
+  },
+  {
+    id: "date-accuracy",
+    figure: "85.0%",
+    label: "of dates read correctly",
+    detail: `34 of 40, the weakest field in the set. All six misses are one mistake: a printed date whose day is 12 or under read in the other day-month convention, so 05/06 can come back as either the fifth of June or the sixth of May. Nothing on the paper says which convention it used, and the app sends no locale with the image. The eight invoices printing an ISO date read 8 of 8, so check a slash-separated date before you trust it.`,
+    source: `The \`date\` row of ${ACCURACY_RUN.report}, compared by lib/accuracy.ts`,
+    measured: MEASURED,
+  },
   {
     id: "fields",
     figure: String(RECEIPT_FIELD_COUNT),
@@ -192,10 +284,19 @@ export const SITE_FIGURES: readonly SiteFigure[] = [
   },
 ];
 
-/** The ids the landing page prints as stat tiles, in the order they sit in the row. */
+/**
+ * The ids the landing page prints as stat tiles, in the order they sit in the grid.
+ *
+ * Six, as two rows of three: the measured figures first, then what the app reads
+ * and what it accepts. The accuracy spec requires the tiles to state the same
+ * three measured figures the About page and the README state, so all three lead
+ * here. The line item value count and the two thresholds came out of the row to
+ * keep both rows full; they still sit in the About page's table and in the
+ * README, which is where a reader goes for the whole list.
+ */
 export const STAT_TILE_IDS = [
+  ...ACCURACY_FIGURE_IDS,
   "fields",
-  "line-item-values",
   "formats",
   "session-cap",
 ] as const;
@@ -231,10 +332,15 @@ export type FailureCase = {
  */
 export const FAILURE_CASES: readonly FailureCase[] = [
   {
+    id: "ambiguous-dates",
+    title: "A date whose day could be its month",
+    detail: `This is the measured weakest field: the date read 34 of ${ACCURACY_RUN.fixtureCount} on the fixture run, and all six misses are the same mistake. Each prints a day of 12 or under, so 05/06 is genuinely either the fifth of June or the sixth of May, and the model answered with the other reading. Nothing on the paper says which convention it used, the app sends no locale with the image, and it will not guess one on your behalf. The eight fixtures printing an ISO date read 8 of 8, so a slash-separated date is the one to check before you export.`,
+  },
+  {
     id: "faded-thermal",
     title: "Faded thermal paper",
     detail:
-      "A till receipt that has spent a month in a hot car prints grey on grey. The model guesses at the digits, and the OCR pass that draws the highlight finds no words at all, so a wrong figure can arrive with no mark beside it to check it against.",
+      "A till receipt that has spent a month in a hot car prints grey on grey. The model guesses at the digits, and the OCR pass that draws the highlight finds no words at all, so a wrong figure can arrive with no mark beside it to check it against. The fixture run does not measure this case: its fading is drawn in code and the faded fixtures scored 98.4%, close to the clean renders, so real thermal paper is worse than any figure on this site.",
   },
   {
     id: "handwriting",
@@ -258,7 +364,7 @@ export const FAILURE_CASES: readonly FailureCase[] = [
     id: "other-languages",
     title: "Receipts not printed in English",
     detail:
-      "The prompt is written in English. Amounts and dates usually survive, and the currency code often does, but a merchant name in another script can come back as an English guess at it.",
+      "The prompt is written in English. Amounts and dates usually survive, and the currency code often does, but a merchant name in another script can come back as an English guess at it. The fixture set says nothing either way, because every fixture in it prints English.",
   },
   {
     id: "arithmetic-ambiguity",
@@ -269,11 +375,16 @@ export const FAILURE_CASES: readonly FailureCase[] = [
   {
     id: "unexercised-review-flag",
     title: "The review flag is barely exercised",
-    detail: `${EXTRACTION_MODEL} has not yet reported a confidence under ${REVIEW_THRESHOLD} on anything uploaded to the deployed app, including a deliberately degraded image. The flag rests on unit tests until labelled fixtures measure whether the model ever reports a useful middle confidence.`,
+    detail: `${EXTRACTION_MODEL} has not yet reported a confidence under ${REVIEW_THRESHOLD} on anything uploaded to the deployed app, and the fixture run confirms it: not one of the 1,684 compared fields came back under the line, the lowest confidence reported anywhere was 0.9, and every field the model read wrong reported 0.93 or above. On this set the model's own confidence predicts nothing about whether a value is right, so the flag is a mechanism waiting for a model that uses it rather than a signal to lean on.`,
   },
   {
     id: "missing-highlight",
     title: "A missing highlight is not a missing field",
     detail: `When no run of words scores above ${MATCH_THRESHOLD} against what the model says it read, the app marks nothing rather than marking the wrong region. A correct field can therefore sit on the page with no mark, and the pane says which of the two reasons applies.`,
+  },
+  {
+    id: "mark-on-the-wrong-words",
+    title: "A mark can land on the wrong words",
+    detail: `The threshold refuses a poor match. It has no way to refuse a confident mistake. Over 1,251 measured samples the shipped ${MATCH_THRESHOLD} lost no correct mark and admitted 37 wrong ones, and 29 of those 37 are the currency: asked which characters it read the symbol from, the model often answers with the symbol and a whole address line, so the matcher finds exactly those words and marks the address. 25 of the wrong marks scored a perfect 1, which no threshold can refuse. The fix belongs in the prompt, and it is not in this change.`,
   },
 ];
