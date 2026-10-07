@@ -9,7 +9,7 @@
 - [x] Slice 4: OCR word boxes and click-to-highlight
 - [x] Slice 5: PDF uploads and the remaining file types
 - [x] Slice 6: session table, CSV and batch export
-- [ ] Slice 7: caps, rate limits and the three samples
+- [x] Slice 7: caps, rate limits and the three samples
 - [ ] Slice 8: landing page, chrome, About and README
 - [ ] Slice 9: 40 fixtures and the accuracy numbers
 - [ ] Ship: portfolio card, resume entry, blog post
