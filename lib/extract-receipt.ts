@@ -1,9 +1,11 @@
 import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
 import { EXTRACTION_MODEL, EXTRACTION_PROMPT } from "./model";
+import { checkRateLimit, IP_HOURLY_LIMIT, type RateLimitOutcome } from "./rate-limit";
 import {
   modelReceiptSchema,
   receiptSchema,
+  type ExtractionError,
   type ExtractionErrorCode,
   type Receipt,
 } from "./receipt-schema";
@@ -25,12 +27,24 @@ export type AcceptedImageType = (typeof ACCEPTED_IMAGE_TYPES)[number];
  */
 export const MAX_FILE_BYTES = 8 * 1024 * 1024;
 
+/**
+ * The most files the route reads from one request.
+ *
+ * The app's own picker submits one file, so this cap only ever answers a
+ * crafted request. It is enforced here because the route is the only place a
+ * request carrying several files can arrive.
+ */
+export const MAX_FILES_PER_REQUEST = 5;
+
 /** What one call to the model returns: the raw text of its structured answer. */
 export type ModelCaller = (dataUrl: string) => Promise<string>;
 
+/** What the route asks of the limiter, injected so the tests drive a stand-in. */
+export type RateLimitCheck = (headers: Headers, cost?: number) => Promise<RateLimitOutcome>;
+
 export type ExtractionOutcome =
   | { status: 200; body: Receipt }
-  | { status: number; body: { error: { code: ExtractionErrorCode; message: string } } };
+  | { status: number; body: ExtractionError };
 
 /** The copy the browser falls back to. The page keys its own wording off the code. */
 const ERROR_MESSAGES: Record<ExtractionErrorCode, string> = {
@@ -41,7 +55,21 @@ const ERROR_MESSAGES: Record<ExtractionErrorCode, string> = {
   too_large: "That file is larger than the app accepts.",
   model_call_failed: "The extraction did not finish.",
   validation_failed: "The model's answer did not match the shape the app expects.",
+  rate_limited:
+    `This address has used its ${IP_HOURLY_LIMIT} extractions for the hour.` +
+    " The allowance is shared by everyone sending from the same address.",
+  // The browser refuses on the session cap before it posts, so the route never
+  // answers with this message. It is here because the table covers the union.
+  session_cap_reached: "This session has used every extraction it is allowed.",
 };
+
+/** What a visitor reads when the app could not reach its own counter. */
+const LIMIT_UNCHECKED_MESSAGE =
+  "The app could not check its own hourly limit, so it did not run the extraction." +
+  " Try again in a minute.";
+
+/** What a visitor reads when a request carries more files than the route reads. */
+const TOO_MANY_FILES_MESSAGE = `The app reads at most ${MAX_FILES_PER_REQUEST} files in one request.`;
 
 /** Whether the route reads this media type. */
 export function isAcceptedImageType(type: string): type is AcceptedImageType {
@@ -50,6 +78,23 @@ export function isAcceptedImageType(type: string): type is AcceptedImageType {
 
 function fail(code: ExtractionErrorCode, status: number): ExtractionOutcome {
   return { status, body: { error: { code, message: ERROR_MESSAGES[code] } } };
+}
+
+/**
+ * A refusal whose wording is not the code's own.
+ *
+ * Two refusals need this. A request carrying nine files fails on its count
+ * rather than on one file's size, and the limiter failing to answer is a
+ * different sentence from a visitor who spent their allowance. Both reuse a
+ * code, because the error vocabulary stays small on purpose.
+ */
+function failWith(
+  code: ExtractionErrorCode,
+  status: number,
+  message: string,
+  resetAt?: number,
+): ExtractionOutcome {
+  return { status, body: { error: { code, message, ...(resetAt ? { resetAt } : {}) } } };
 }
 
 /** One OpenAI call, with the image carried inline as a base64 data URL. */
@@ -92,13 +137,48 @@ function readApiKey(): string {
  * disk, to object storage or to OpenAI's Files API, because the storage policy on
  * the page says the upload lives in memory for the length of the request.
  *
- * `callModel` is injected so the tests exercise every branch without a key and
- * without a network call.
+ * The hourly allowance is checked first, before the multipart body is parsed, so
+ * a refused request costs as little as possible and never reads the bytes. That
+ * puts the file count, the type and the size after it, which is the order a
+ * visitor is better served by: an address over its allowance learns that rather
+ * than learning its file was the wrong type.
+ *
+ * `callModel` and `checkLimit` are both injected, so the tests exercise every
+ * branch without a key, without a counter store and without a network call.
  */
 export async function extractReceipt(
-  form: FormData,
+  request: Request,
   callModel: ModelCaller = callOpenAI,
+  checkLimit: RateLimitCheck = checkRateLimit,
 ): Promise<ExtractionOutcome> {
+  // One unit, because this route makes one model call per request whatever the
+  // form carries. A request with several files is refused on the count below
+  // rather than extracted file by file, so the cost is known before the body is.
+  const allowance = await checkLimit(request.headers, 1);
+
+  if (allowance.status === "limited") {
+    return failWith("rate_limited", 429, ERROR_MESSAGES.rate_limited, allowance.resetAt);
+  }
+
+  if (allowance.status === "unavailable") {
+    // Failing open on a route that spends money is the wrong default, so an
+    // unreachable counter refuses the extraction. The refusal carries no reset
+    // time, because with no count there is no window to name, and it says
+    // nothing about the store it could not reach.
+    return failWith("rate_limited", 503, LIMIT_UNCHECKED_MESSAGE);
+  }
+
+  // `unconfigured` falls through and runs the extraction. The limiter has
+  // already logged it loudly; taking the demo down over a deployment nobody
+  // finished would be the worse failure.
+
+  const form = await request.formData();
+  const files = [...form.values()].filter((value) => value instanceof File);
+
+  if (files.length > MAX_FILES_PER_REQUEST) {
+    return failWith("too_large", 413, TOO_MANY_FILES_MESSAGE);
+  }
+
   const file = form.get("file");
 
   if (!(file instanceof File)) {

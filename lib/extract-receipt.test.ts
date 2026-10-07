@@ -3,8 +3,11 @@ import {
   ACCEPTED_IMAGE_TYPES,
   extractReceipt,
   isAcceptedImageType,
+  MAX_FILES_PER_REQUEST,
   type ModelCaller,
+  type RateLimitCheck,
 } from "./extract-receipt";
+import { IP_HOURLY_LIMIT } from "./rate-limit";
 import type { Receipt } from "./receipt-schema";
 
 /** A minimal receipt the stubbed model answers with. */
@@ -71,13 +74,43 @@ function refusal(): Receipt {
   return { ...emptied, isReceipt: false, reason: "This photograph shows a menu." };
 }
 
-function form(file: File | null): FormData {
+/**
+ * One POST to the route, as the whole request.
+ *
+ * `extractReceipt` reads the hourly allowance off the headers before it parses
+ * the body, so the suite drives it with a `Request` rather than a `FormData`.
+ */
+function post(files: File | File[] | null, address = "203.0.113.7"): Request {
   const data = new FormData();
-  if (file) {
-    data.set("file", file);
+  for (const file of files === null ? [] : [files].flat()) {
+    data.append("file", file);
   }
-  return data;
+
+  return new Request("http://localhost/api/extract", {
+    method: "POST",
+    body: data,
+    headers: new Headers({ "x-forwarded-for": address }),
+  });
 }
+
+/** The reset time a stand-in limiter reports: the top of the next hour. */
+const RESET_AT = Date.parse("2026-10-07T15:00:00.000Z");
+
+/** A limiter that allows. Every test states which limiter it wants. */
+const allow: RateLimitCheck = async () => ({
+  status: "allowed",
+  remaining: IP_HOURLY_LIMIT - 1,
+  resetAt: RESET_AT,
+});
+
+/** A limiter that refuses, which is an address over its hourly allowance. */
+const limited: RateLimitCheck = async () => ({ status: "limited", resetAt: RESET_AT });
+
+/** A limiter whose store could not be reached. */
+const unavailable: RateLimitCheck = async () => ({ status: "unavailable" });
+
+/** A deployment with no counter credentials, which allows and logs loudly. */
+const unconfigured: RateLimitCheck = async () => ({ status: "unconfigured" });
 
 function jpeg(bytes = 64): File {
   return new File([new Uint8Array(bytes)], "receipt.jpg", { type: "image/jpeg" });
@@ -101,7 +134,7 @@ describe("extractReceipt", () => {
     const { caller, calls } = stub(answer());
     const file = new File([new Uint8Array(16)], "receipt", { type });
 
-    const outcome = await extractReceipt(form(file), caller);
+    const outcome = await extractReceipt(post(file), caller, allow);
 
     expect(outcome.status).toBe(200);
     expect(calls).toHaveLength(1);
@@ -113,7 +146,7 @@ describe("extractReceipt", () => {
       type: "application/pdf",
     });
 
-    const outcome = await extractReceipt(form(pdf), caller);
+    const outcome = await extractReceipt(post(pdf), caller, allow);
 
     expect(outcome.status).toBe(415);
     expect(outcome.body).toEqual({
@@ -126,7 +159,7 @@ describe("extractReceipt", () => {
     const { caller, calls } = stub(answer());
     const unnamed = new File([new Uint8Array(8)], "receipt.jpg", { type: "" });
 
-    const outcome = await extractReceipt(form(unnamed), caller);
+    const outcome = await extractReceipt(post(unnamed), caller, allow);
 
     expect(outcome.status).toBe(415);
     expect(outcome.body).toMatchObject({ error: { code: "unsupported_type" } });
@@ -137,7 +170,7 @@ describe("extractReceipt", () => {
     const { caller } = stub(answer());
     const heic = new File([new Uint8Array(8)], "receipt.heic", { type: "image/heic" });
 
-    const outcome = await extractReceipt(form(heic), caller);
+    const outcome = await extractReceipt(post(heic), caller, allow);
 
     const body = outcome.body as { error: { message: string } };
     expect(body.error.message).toContain("PDF");
@@ -150,7 +183,7 @@ describe("extractReceipt", () => {
     const { caller, calls } = stub(answer());
     const png = new File([new Uint8Array(16)], "receipt.png", { type: "image/png" });
 
-    await extractReceipt(form(png), caller);
+    await extractReceipt(post(png), caller, allow);
 
     expect(calls[0]).toMatch(/^data:image\/png;base64,/);
   });
@@ -158,7 +191,7 @@ describe("extractReceipt", () => {
   it("refuses a request carrying no file", async () => {
     const { caller, calls } = stub(answer());
 
-    const outcome = await extractReceipt(form(null), caller);
+    const outcome = await extractReceipt(post(null), caller, allow);
 
     expect(outcome.status).toBe(400);
     expect(calls).toHaveLength(0);
@@ -170,7 +203,7 @@ describe("extractReceipt", () => {
       type: "image/jpeg",
     });
 
-    const outcome = await extractReceipt(form(huge), caller);
+    const outcome = await extractReceipt(post(huge), caller, allow);
 
     expect(outcome.status).toBe(413);
     expect(outcome.body).toMatchObject({ error: { code: "too_large" } });
@@ -180,7 +213,7 @@ describe("extractReceipt", () => {
   it("makes exactly one model call per request, with the image inline", async () => {
     const { caller, calls } = stub(answer());
 
-    const outcome = await extractReceipt(form(jpeg()), caller);
+    const outcome = await extractReceipt(post(jpeg()), caller, allow);
 
     expect(outcome.status).toBe(200);
     expect(calls).toHaveLength(1);
@@ -190,7 +223,7 @@ describe("extractReceipt", () => {
   it("returns the validated receipt with its money as decimal strings", async () => {
     const { caller } = stub(answer());
 
-    const outcome = await extractReceipt(form(jpeg()), caller);
+    const outcome = await extractReceipt(post(jpeg()), caller, allow);
 
     expect(outcome.status).toBe(200);
     expect(outcome.body).toMatchObject({ total: "42.00", subtotal: "38.40" });
@@ -199,7 +232,7 @@ describe("extractReceipt", () => {
   it("answers 200 with the reason and null fields when the image is not a receipt", async () => {
     const { caller } = stub(refusal());
 
-    const outcome = await extractReceipt(form(jpeg()), caller);
+    const outcome = await extractReceipt(post(jpeg()), caller, allow);
 
     expect(outcome.status).toBe(200);
     expect(outcome.body).toMatchObject({
@@ -214,7 +247,7 @@ describe("extractReceipt", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const { caller } = stub(answer({ total: 42 as unknown as string }));
 
-    const outcome = await extractReceipt(form(jpeg()), caller);
+    const outcome = await extractReceipt(post(jpeg()), caller, allow);
 
     expect(outcome.status).toBe(502);
     const serialized = JSON.stringify(outcome.body);
@@ -233,7 +266,7 @@ describe("extractReceipt", () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     const { caller } = stub(answer({ total: 42 as unknown as string }));
 
-    await extractReceipt(form(jpeg()), caller);
+    await extractReceipt(post(jpeg()), caller, allow);
 
     const line = logged.mock.calls.map((call) => call.join(" ")).join("\n");
     expect(line).toContain("total");
@@ -245,7 +278,7 @@ describe("extractReceipt", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const { caller } = stub("I am afraid I cannot read that receipt.");
 
-    const outcome = await extractReceipt(form(jpeg()), caller);
+    const outcome = await extractReceipt(post(jpeg()), caller, allow);
 
     expect(outcome.body).toMatchObject({ error: { code: "validation_failed" } });
   });
@@ -256,11 +289,165 @@ describe("extractReceipt", () => {
       throw new Error("401 Incorrect API key provided: sk-secret");
     };
 
-    const outcome = await extractReceipt(form(jpeg()), caller);
+    const outcome = await extractReceipt(post(jpeg()), caller, allow);
 
     expect(outcome.status).toBe(502);
     expect(JSON.stringify(outcome.body)).not.toContain("sk-secret");
     expect(outcome.body).toMatchObject({ error: { code: "model_call_failed" } });
+  });
+});
+
+describe("the hourly allowance at the route", () => {
+  it("refuses an address over its allowance without calling the model", async () => {
+    const { caller, calls } = stub(answer());
+
+    const outcome = await extractReceipt(post(jpeg()), caller, limited);
+
+    expect(outcome.status).toBe(429);
+    expect(outcome.body).toMatchObject({ error: { code: "rate_limited" } });
+    expect(calls).toHaveLength(0);
+  });
+
+  it("carries the reset time in the refusal body", async () => {
+    const { caller } = stub(answer());
+
+    const outcome = await extractReceipt(post(jpeg()), caller, limited);
+
+    expect(outcome.body).toMatchObject({ error: { resetAt: RESET_AT } });
+  });
+
+  it("names the twenty and the shared address in the refusal a visitor reads", async () => {
+    const { caller } = stub(answer());
+
+    const outcome = await extractReceipt(post(jpeg()), caller, limited);
+
+    const body = outcome.body as { error: { message: string } };
+    expect(body.error.message).toContain(String(IP_HOURLY_LIMIT));
+    expect(body.error.message).toContain("shared");
+  });
+
+  it("refuses without reading the uploaded bytes", async () => {
+    const { caller } = stub(answer());
+    const request = post(jpeg(4 * 1024 * 1024));
+
+    await extractReceipt(request, caller, limited);
+
+    expect(request.bodyUsed).toBe(false);
+  });
+
+  it("says nothing about the provider, the counter store or any credential", async () => {
+    const { caller } = stub(answer());
+
+    const outcome = await extractReceipt(post(jpeg()), caller, limited);
+
+    const serialized = JSON.stringify(outcome.body).toLowerCase();
+    for (const leak of ["openai", "upstash", "redis", "kv_rest", "token", "http"]) {
+      expect(serialized).not.toContain(leak);
+    }
+  });
+
+  it("spends one unit, because the route makes one model call per request", async () => {
+    const { caller } = stub(answer());
+    const costs: (number | undefined)[] = [];
+    const counting: RateLimitCheck = async (_headers, cost) => {
+      costs.push(cost);
+      return { status: "allowed", remaining: 1, resetAt: RESET_AT };
+    };
+
+    await extractReceipt(post(jpeg()), caller, counting);
+
+    expect(costs).toEqual([1]);
+  });
+
+  it("reads the allowance against the address the request carries", async () => {
+    const { caller } = stub(answer());
+    const seen: (string | null)[] = [];
+    const watching: RateLimitCheck = async (headers) => {
+      seen.push(headers.get("x-forwarded-for"));
+      return { status: "allowed", remaining: 1, resetAt: RESET_AT };
+    };
+
+    await extractReceipt(post(jpeg(), "198.51.100.9"), caller, watching);
+
+    expect(seen).toEqual(["198.51.100.9"]);
+  });
+
+  it("refuses when the counter store could not be reached, in its own words", async () => {
+    const { caller, calls } = stub(answer());
+
+    const outcome = await extractReceipt(post(jpeg()), caller, unavailable);
+
+    expect(outcome.status).toBe(503);
+    const body = outcome.body as {
+      error: { code: string; message: string; resetAt?: number };
+    };
+    expect(body.error.code).toBe("rate_limited");
+    expect(body.error.message).toContain("could not check its own hourly limit");
+    expect(body.error.message).not.toContain(String(IP_HOURLY_LIMIT));
+    expect(body.error.resetAt).toBeUndefined();
+    expect(calls).toHaveLength(0);
+  });
+
+  it("runs the extraction when no counter store is configured", async () => {
+    const { caller, calls } = stub(answer());
+
+    const outcome = await extractReceipt(post(jpeg()), caller, unconfigured);
+
+    expect(outcome.status).toBe(200);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("tells an address over its allowance that, rather than that its file is the wrong type", async () => {
+    const { caller, calls } = stub(answer());
+    const pdf = new File([new Uint8Array(8)], "invoice.pdf", { type: "application/pdf" });
+
+    const outcome = await extractReceipt(post(pdf), caller, limited);
+
+    expect(outcome.body).toMatchObject({ error: { code: "rate_limited" } });
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe("the five-file cap at the route", () => {
+  it("refuses six files without calling the model", async () => {
+    const { caller, calls } = stub(answer());
+    const six = Array.from({ length: 6 }, () => jpeg());
+
+    const outcome = await extractReceipt(post(six), caller, allow);
+
+    expect(outcome.status).toBe(413);
+    expect(outcome.body).toMatchObject({ error: { code: "too_large" } });
+    expect(calls).toHaveLength(0);
+  });
+
+  it("names the five-file cap rather than the size cap", async () => {
+    const { caller } = stub(answer());
+    const nine = Array.from({ length: 9 }, () => jpeg());
+
+    const outcome = await extractReceipt(post(nine), caller, allow);
+
+    const body = outcome.body as { error: { message: string } };
+    expect(body.error.message).toContain(String(MAX_FILES_PER_REQUEST));
+    expect(body.error.message).toContain("files");
+  });
+
+  it("accepts the one file the app's own picker submits", async () => {
+    const { caller, calls } = stub(answer());
+
+    const outcome = await extractReceipt(post(jpeg()), caller, allow);
+
+    expect(outcome.status).toBe(200);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("accepts a request at the cap and reads the first file", async () => {
+    const { caller, calls } = stub(answer());
+    const five = Array.from({ length: MAX_FILES_PER_REQUEST }, () => jpeg());
+
+    const outcome = await extractReceipt(post(five), caller, allow);
+
+    expect(outcome.status).toBe(200);
+    expect(calls).toHaveLength(1);
   });
 });
 

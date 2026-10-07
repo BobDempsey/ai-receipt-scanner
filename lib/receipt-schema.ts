@@ -160,18 +160,41 @@ export type ReceiptLineItem = Receipt["lineItems"] extends (infer Entry)[] | nul
   ? Entry
   : never;
 
-/** The error identifiers the route answers with. The browser keys its copy off these. */
+/**
+ * The error identifiers the app answers with. The browser keys its copy off these.
+ *
+ * One of them never arrives from the route. `session_cap_reached` is refused in
+ * the browser, because the app knows the session count without asking the
+ * server, so nothing leaves the page and the route never returns that code. It
+ * sits in this union anyway, so the workspace's copy table covers every refusal
+ * a visitor can read and TypeScript finds the missing case when a code is added.
+ */
 export const EXTRACTION_ERROR_CODES = [
   "unsupported_type",
   "too_large",
   "model_call_failed",
   "validation_failed",
+  "rate_limited",
+  "session_cap_reached",
 ] as const;
 
 export type ExtractionErrorCode = (typeof EXTRACTION_ERROR_CODES)[number];
 
 export type ExtractionError = {
-  error: { code: ExtractionErrorCode; message: string };
+  error: {
+    code: ExtractionErrorCode;
+    message: string;
+    /**
+     * When the hourly allowance returns, in epoch milliseconds.
+     *
+     * Only a `rate_limited` refusal carries it, and only when the limiter knew
+     * the window: a refusal because the counter store could not be reached
+     * names no time, because there is no count and no window to name. The
+     * browser formats it in the visitor's own zone, which is why the route
+     * sends a number rather than a sentence.
+     */
+    resetAt?: number;
+  };
 };
 
 /** What the route answers: either a validated receipt or one error code. */
