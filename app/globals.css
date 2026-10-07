@@ -57,13 +57,32 @@ body {
    The selectors carry `:root` because Mantine writes its own value at
    `:root[data-mantine-color-scheme="…"]`, which outranks a bare attribute
    selector. `ColorSchemeScript` sets that attribute before the first paint, so
-   both branches are decided by then. */
+   both branches are decided by then.
+
+   An input's placeholder is text, so 1.4.3 covers it too, and Mantine colours it
+   from a token of its own rather than from the dimmed one: gray 5 measured 2.07 to
+   1 against the white picker and the dark value measured 2.47 to 1 against the
+   #2e2e2e one. Each branch points the placeholder at the dimmed value beside it,
+   which reads 8.18 to 1 light and 6.85 dark and cannot drift away from the prose.
+
+   The third declaration is the label on a `variant="light"` teal control, which
+   the three sample buttons and every secondary control in the workspace wear.
+   Mantine resolves that variant to teal 1 as a solid surface with teal 9 as the
+   label, measuring 4.33 to 1, and the teal 2 hover surface drops it to 3.81. Teal
+   9 is the darkest teal the palette carries, so the label takes teal 9 pulled a
+   fifth of the way to black: 6.08 to 1 at rest and 5.35 on hover. The surface
+   stays the pale tint, so the control still reads as the quieter sibling of the
+   filled primary rather than competing with it. Dark needs none of this, where the
+   same label measures 11.03 at rest and 7.81 on hover. */
 :root[data-mantine-color-scheme="light"] {
   --mantine-color-dimmed: var(--mantine-color-gray-7);
+  --mantine-color-placeholder: var(--mantine-color-dimmed);
+  --mantine-color-teal-light-color: color-mix(in srgb, var(--mantine-color-teal-9) 80%, black);
 }
 
 :root[data-mantine-color-scheme="dark"] {
   --mantine-color-dimmed: var(--mantine-color-dark-1);
+  --mantine-color-placeholder: var(--mantine-color-dimmed);
 }
 
 /* Motion is decoration, and every rule for it sits behind this query. A visitor
