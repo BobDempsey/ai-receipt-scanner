@@ -44,9 +44,9 @@ Slice 9 of the nine-slice plan: the 40 labelled fixtures and the accuracy number
 ## 7. The specs and the record
 
 - [x] 7.1 Update `ai-receipt-scanner-spec.md` where it disagrees with what this slice settled, including the figures, the fixture set and either threshold if it moved, and verify the product spec and the delta spec now say the same thing.
-- [ ] 7.2 Record the slice 9 decisions in `handoff.md`: the fixtures being generated and damaged rather than photographed, the comparison rules, a refused fixture counting every field wrong, the harness staying manual, the figures themselves, and what the two threshold findings were. Verify the outstanding-work inventory and `tasks.md` at the repo root both reflect the slice as done once group 8 passes.
+- [x] 7.2 Record the slice 9 decisions in `handoff.md`: the fixtures being generated and damaged rather than photographed, the comparison rules, a refused fixture counting every field wrong, the harness staying manual, the figures themselves, and what the two threshold findings were. Verify the outstanding-work inventory and `tasks.md` at the repo root both reflect the slice as done once group 8 passes.
 - [x] 7.3 Run `npm run lint`, `npm run typecheck`, `npm run build` and `npm test`, and verify all four pass.
 
 ## 8. End to end in the running app
 
-- [ ] 8.1 Deploy to production and verify on https://ai-receipt-scanner.bobdempsey83.com that the stat tiles, the About page and the README state the same three figures, that each names the model and the run date, that the About page says the set is generated and damaged in code, that the report is reachable in the repository, and that an extraction still runs end to end from a sample with the highlighting working at whatever threshold this slice settled on.
+- [x] 8.1 Deploy to production and verify on https://ai-receipt-scanner.bobdempsey83.com that the stat tiles, the About page and the README state the same three figures, that each names the model and the run date, that the About page says the set is generated and damaged in code, that the report is reachable in the repository, and that an extraction still runs end to end from a sample with the highlighting working at whatever threshold this slice settled on.

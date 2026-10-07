@@ -11,5 +11,5 @@
 - [x] Slice 6: session table, CSV and batch export
 - [x] Slice 7: caps, rate limits and the three samples
 - [x] Slice 8: landing page, chrome, About and README
-- [ ] Slice 9: 40 fixtures and the accuracy numbers
+- [x] Slice 9: 40 fixtures and the accuracy numbers
 - [ ] Ship: portfolio card, resume entry, blog post
