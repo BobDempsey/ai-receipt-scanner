@@ -22,6 +22,12 @@ When the form is right they export: download JSON, download CSV, or copy either 
 
 If the upload is not a receipt, the app says so and shows nothing else.
 
+The landing page is the app page. There is no separate marketing page: the workspace is the hero, usable without scrolling, and the sections that explain it sit underneath in the order a visitor needs them, numbered step cards for the pipeline, a row of stat tiles carrying figures, two real screenshots of the running app that open full size on click, and a closing band carrying the action that follows from the demo. `app/layout.tsx` renders the nav and the footer, so every route carries both and a page added later cannot forget either. That layout stays a server component, and the two pieces that need state, the theme toggle and the year the footer prints, are client components beneath it.
+
+The control in the hero is a file picker offering the four accepted types, with the three samples under it. Drag and drop onto the page is still wanted and is not built, so the drop zone named above states the intent rather than the control a visitor presses today.
+
+The stat tiles carry figures the code already settles: 12 fields per receipt, 4 values on every line item, 4 file formats up to 8 MB, and 40 scans a session. No accuracy percentage appears anywhere on the site yet, because the labelled set of section 8 has not been measured. `lib/project-facts.ts` holds every figure the site states, each derived from the constant behind it rather than typed a second time, and the About page reads that module directly.
+
 ## 3. The fields
 
 One flat object per receipt, plus a line-item array:
@@ -45,7 +51,7 @@ Money is a decimal string, never a float, and it is parsed with Zod on the way o
 
 ## 4. How the extraction works
 
-**One model call per receipt.** The image goes to `gpt-6.1-sol` with Structured Outputs on the Responses API, `text: { format: { type: "json_schema", strict: true, schema } }`, whose schema is the field set above. Strict mode forces the shape, so there is no JSON parsing out of prose and no retry loop around a malformed response. Zod validates the parsed object a second time on the server, because a schema the model satisfies can still be wrong about types. A PDF never reaches that call as a PDF: the page rasterizes its first page and posts the bitmap, so the route takes `image/jpeg`, `image/png` and `image/webp`, and no document parser runs on the server.
+**One model call per receipt.** The image goes to `gpt-6.1-sol` with Structured Outputs on the Responses API, `text: { format: zodTextFormat(modelReceiptSchema, "receipt") }`, the SDK helper that writes the `json_schema` format out of a Zod schema with `strict: true` and the name the format requires. That schema is the field set above. Strict mode forces the shape, so there is no JSON parsing out of prose and no retry loop around a malformed response. Zod validates the parsed object a second time on the server, against `receiptSchema`, the same shape carrying the decimal and date patterns strict mode will not accept, because a schema the model satisfies can still be wrong about types. A PDF never reaches that call as a PDF: the page rasterizes its first page and posts the bitmap, so the route takes `image/jpeg`, `image/png` and `image/webp`, and no document parser runs on the server.
 
 **Per-field confidence comes from the model.** Every field in the response schema carries a sibling `confidence` between 0 and 1 and a `sourceText` holding the characters the model read the value from. Anything under 0.8 is flagged for review in the UI.
 
@@ -113,9 +119,9 @@ Pick them so they exercise the hard parts rather than the easy one. The grocery 
 
 Hand-label 40 receipts and keep them in the repo as fixtures with their expected output. Report field-level accuracy, and report `total` and `date` separately, because those two are what anyone would actually use.
 
-Put the numbers on the About page and in the README, and keep them equal in both. When the prompt or the model changes, rerun the set and change both numbers together.
+Put the numbers in three places, the landing page's stat tiles, the About page and the README, and keep them equal in all three. When the prompt or the model changes, rerun the set and change all three together. Until the set is labelled the tiles carry figures the code settles instead, because a tile reading "coming soon" is worse than a tile reading something true.
 
-Document the failure cases in the README rather than hiding them: faded thermal paper, handwritten totals, receipts photographed at an angle, and any language the labelled set does not cover. A reader learns more from the four things it gets wrong than from the figure it gets right.
+Document the failure cases in the README rather than hiding them, and name them on the About page as well. `lib/project-facts.ts` is where they live, the About page renders them and the README transcribes them, so the two documents cannot answer the question differently. The eight cases it names today are faded thermal paper, handwriting, angled or crumpled photographs, a PDF past its first page, a receipt printed in another language, a receipt whose own arithmetic is wrong, the review flag the deployed model has never yet triggered, and a missing highlight that is not a missing field. A reader learns more from the cases it gets wrong than from the figure it gets right.
 
 ## 9. Stack
 
@@ -123,6 +129,10 @@ Document the failure cases in the README rather than hiding them: faded thermal 
 | --- | --- |
 | Framework | Next.js 16, React 19, TypeScript |
 | UI | Mantine, with its PostCSS preset |
+| Site chrome | The nav and the footer in `app/layout.tsx`, so every route carries them, with the theme toggle on Mantine's `useMantineColorScheme` and `ColorSchemeScript` the one thing applying the stored theme before first paint |
+| Shared measurements | CSS custom properties on `:root` in `app/globals.css`: `--content-max` at 72rem, `--prose-measure` at 65ch, a clamped headline scale with tight tracking, and `--nav-height`. Every container reads `Container size="var(--content-max)"` |
+| Accent | Mantine's teal at `primaryShade` light 9 and dark 5, with Mantine's own dimmed text overridden because it missed the contrast floor |
+| Motion | CSS alone: a hover lift and a scroll reveal on `animation-timeline: view()`, every rule inside `@media (prefers-reduced-motion: no-preference)` behind an `@supports` guard |
 | Model | OpenAI API, `gpt-6.1-sol`, Structured Outputs in strict mode on the Responses API |
 | Validation | Zod, shared between the client and the server route |
 | OCR for boxes | tesseract.js in a web worker, its worker, wasm core and language data self-hosted under `public/tesseract/`; `pdfjs-dist` 6.4.299 for a PDF's first page, its text layer and its rasterizing, with its worker self-hosted under `public/pdfjs/` |
@@ -130,6 +140,10 @@ Document the failure cases in the README rather than hiding them: faded thermal 
 | Rate-limit counters | Upstash Redis over its REST API through `@upstash/redis`, keyed by address and clock hour |
 | Host | Vercel, with Web Analytics in production builds only |
 | Tests | Vitest for the schema, the arithmetic checks and the matcher; Playwright for the upload-to-export path |
+
+Slice 8 measured the contrast rather than assuming it, and the shipped ratios are the numbers a later theme change has to beat: body text at 21.00 to 1 in light and 9.37 to 1 in dark, the accent against the surface behind it at 5.00 and 7.29, dimmed text at 8.18 and 7.83, and a label on a filled accent at 5.00 and 9.86. The shades moved because the defaults failed: teal 6 measured 2.55 to 1 against the white body and teal 8 measured 3.94 to 1 against the dark one, and Mantine's own dimmed text measured 3.32 and 4.04.
+
+The scroll reveal animates from a visible state, 88 percent opacity half a line low, so a browser without `animation-timeline` and an animation that never fires both leave the content readable where it stands. Nothing runs on first paint.
 
 Next and React, chosen over the Nuxt this spec originally called for. The Vue argument was that the resume is retargeted at Vue and Nuxt; React won anyway, on the grounds that it is the stack the work gets done in.
 
