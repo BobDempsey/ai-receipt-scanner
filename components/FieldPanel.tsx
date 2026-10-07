@@ -208,7 +208,12 @@ function Confidence({ row }: { row: FieldRow }) {
         {row.confidence.toFixed(2)}
       </Text>
       {needsReview(row) ? (
-        <Badge color="yellow" variant="light" size="xs">
+        <Badge
+          color="yellow"
+          variant="light"
+          size="xs"
+          classNames={{ root: classes.warningBadge, label: classes.warningBadgeLabel }}
+        >
           check this
         </Badge>
       ) : null}
@@ -221,6 +226,10 @@ function Confidence({ row }: { row: FieldRow }) {
  *
  * The wording comes off the warning the arithmetic module composed, so the panel
  * and the JSON download say the same thing about the same gap.
+ *
+ * The sentence prints in the body colour and an amber bar runs down its start
+ * edge, because amber letters measured 2.48 to 1 against the white row and 2.36
+ * against a zebra one, and no yellow Mantine carries clears 4.5 as text on white.
  */
 function RowWarnings({ warnings }: { warnings: ArithmeticWarning[] }) {
   if (warnings.length === 0) {
@@ -230,7 +239,7 @@ function RowWarnings({ warnings }: { warnings: ArithmeticWarning[] }) {
   return (
     <Stack gap={2} mt={4}>
       {warnings.map((warning) => (
-        <Text key={warning.check} c="yellow.8" size="xs" role="status">
+        <Text key={warning.check} className={classes.rowWarning} size="xs" role="status">
           {warning.message}
         </Text>
       ))}
@@ -361,7 +370,12 @@ function LineItemRowCells({
             </Badge>
           ) : null}
           {itemNeedsReview(row) ? (
-            <Badge color="yellow" variant="light" size="xs">
+            <Badge
+              color="yellow"
+              variant="light"
+              size="xs"
+              classNames={{ root: classes.warningBadge, label: classes.warningBadgeLabel }}
+            >
               check this
             </Badge>
           ) : null}
@@ -496,14 +510,23 @@ export function FieldPanel({
       </Title>
 
       {warnings.length > 0 ? (
-        <Alert color="yellow" title="The arithmetic does not add up">
+        <Alert
+          color="yellow"
+          title="The arithmetic does not add up"
+          classNames={{ title: classes.warningTitle }}
+          icon={
+            <Text component="span" aria-hidden className={classes.warningIcon}>
+              ⚠
+            </Text>
+          }
+        >
           <Stack gap="xs">
             {warnings.map((warning) => (
               <Text key={warning.check} size="sm">
                 {warning.message}
               </Text>
             ))}
-            <Text c="dimmed" size="xs">
+            <Text size="xs">
               The app changed nothing to close the gap. Correct a value below and
               the app runs both checks again.
             </Text>

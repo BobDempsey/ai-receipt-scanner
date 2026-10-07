@@ -73,16 +73,32 @@ body {
    fifth of the way to black: 6.08 to 1 at rest and 5.35 on hover. The surface
    stays the pale tint, so the control still reads as the quieter sibling of the
    filled primary rather than competing with it. Dark needs none of this, where the
-   same label measures 11.03 at rest and 7.81 on hover. */
+   same label measures 11.03 at rest and 7.81 on hover.
+
+   The fourth declaration is the amber the arithmetic warnings mark themselves
+   with, and it paints borders and an icon rather than letters. Yellow 9 is the
+   darkest yellow Mantine carries and it measures 2.69 to 1 as text on the yellow
+   1 tint, so no shade of the family clears the 4.5 to 1 that 1.4.3 asks of the
+   warning sentences. The panel and the session table therefore print those
+   sentences in the body colour, which measures 21.00 to 1 light and 9.37 dark,
+   and hand the amber to the alert's icon, the row's left bar and the badge's
+   ring. Those are graphics, so 1.4.11 asks 3 to 1 of them: light takes yellow 9
+   pulled three tenths of the way to black, which the browser measured at 5.00
+   against the tint and 5.58 against the white body, and dark takes yellow 4 at
+   6.20 against the tint and 10.89 against the dark body. A warning that carries
+   its amber in a shape and an edge also stops relying on colour alone, which is
+   what 1.4.1 asks. */
 :root[data-mantine-color-scheme="light"] {
   --mantine-color-dimmed: var(--mantine-color-gray-7);
   --mantine-color-placeholder: var(--mantine-color-dimmed);
   --mantine-color-teal-light-color: color-mix(in srgb, var(--mantine-color-teal-9) 80%, black);
+  --warning-mark: color-mix(in srgb, var(--mantine-color-yellow-9) 70%, black);
 }
 
 :root[data-mantine-color-scheme="dark"] {
   --mantine-color-dimmed: var(--mantine-color-dark-1);
   --mantine-color-placeholder: var(--mantine-color-dimmed);
+  --warning-mark: var(--mantine-color-yellow-4);
 }
 
 /* Motion is decoration, and every rule for it sits behind this query. A visitor
@@ -102,14 +118,19 @@ body {
    chance. */
 @media (prefers-reduced-motion: no-preference) {
   @supports (animation-timeline: view()) {
+    /* The reveal moves a section and never fades it. An earlier version started
+       at 0.88 opacity, which read well and quietly cost contrast: an ancestor at
+       88 percent drags everything inside it, so the step card numbers and the
+       stat tile figures measured 4.25 while a section was still entering and
+       5.00 once it settled. A ratio that depends on scroll position is a ratio
+       nobody can check, so the fade is gone and the movement carries the
+       reveal. */
     @keyframes site-reveal {
       from {
-        opacity: 0.88;
         transform: translateY(0.75rem);
       }
 
       to {
-        opacity: 1;
         transform: translateY(0);
       }
     }

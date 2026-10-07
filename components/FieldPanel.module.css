@@ -19,3 +19,44 @@
   outline: rem(2px) solid var(--mantine-primary-color-filled);
   outline-offset: rem(1px);
 }
+
+/* The arithmetic warnings. Mantine's yellow cannot reach 4.5 to 1 as text on its
+   own tint, so the sentences print in the body colour and the amber moves to the
+   alert's icon, the row's left bar and the badge's ring, where 1.4.11 asks 3 to 1
+   of it rather than 4.5. `--warning-mark` carries that amber per scheme and
+   `globals.css` records both measurements.
+
+   Each rule paints the element that holds the text rather than an ancestor,
+   because Mantine writes a badge's label colour and an alert's accent as inline
+   custom properties no stylesheet outranks. A colour declared on the element
+   itself beats the one it would have inherited, whatever the inline property
+   says. */
+
+.warningTitle {
+  color: light-dark(var(--mantine-color-black), var(--mantine-color-white));
+}
+
+.warningIcon {
+  color: var(--warning-mark);
+  font-size: var(--mantine-font-size-lg);
+  line-height: 1;
+}
+
+/* The bar is what a visitor scanning the column sees before they read the words,
+   which is the job the amber letters used to do. */
+
+.rowWarning {
+  border-inline-start: rem(3px) solid var(--warning-mark);
+  padding-inline-start: rem(6px);
+}
+
+/* The ring is a box shadow rather than a border, because the border is one of the
+   properties Mantine writes inline. */
+
+.warningBadge {
+  box-shadow: inset 0 0 0 rem(1px) var(--warning-mark);
+}
+
+.warningBadgeLabel {
+  color: light-dark(var(--mantine-color-black), var(--mantine-color-white));
+}

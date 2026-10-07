@@ -18,3 +18,20 @@
 .openRow {
   background-color: var(--mantine-color-default-hover);
 }
+
+/* The warning badge on a row, which says the same thing the panel's alert says
+   about the receipt the row names. Its label prints in the body colour because
+   Mantine's yellow measures 2.69 to 1 as text on its own tint, and the amber it
+   lost moves to a ring around the pill, where 3 to 1 is the bar. `--warning-mark`
+   in `globals.css` carries that amber and records both measurements. The ring is
+   a box shadow and the label colour sits on the label itself, because Mantine
+   writes a badge's border and its label colour as inline custom properties no
+   stylesheet outranks. */
+
+.warningBadge {
+  box-shadow: inset 0 0 0 rem(1px) var(--warning-mark);
+}
+
+.warningBadgeLabel {
+  color: light-dark(var(--mantine-color-black), var(--mantine-color-white));
+}

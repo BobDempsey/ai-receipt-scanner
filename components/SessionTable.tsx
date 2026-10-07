@@ -124,7 +124,15 @@ export function SessionTable({
                     </Table.Td>
                     <Table.Td>
                       {warned ? (
-                        <Badge color="yellow" variant="light" size="sm">
+                        <Badge
+                          color="yellow"
+                          variant="light"
+                          size="sm"
+                          classNames={{
+                            root: classes.warningBadge,
+                            label: classes.warningBadgeLabel,
+                          }}
+                        >
                           {record.warnings.length === 1
                             ? "1 warning, still wants checking"
                             : `${record.warnings.length} warnings, still wants checking`}
