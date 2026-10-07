@@ -15,6 +15,7 @@ import {
 } from "@mantine/core";
 import { FieldPanel, type CommitEdit, type Rejections } from "./FieldPanel";
 import { arithmeticWarnings, type ArithmeticWarning } from "@/lib/arithmetic";
+import { fitForUpload } from "@/lib/downscale";
 import {
   addLineItem,
   addressKey,
@@ -43,6 +44,12 @@ import {
   type ExtractionResponse,
   type Receipt,
 } from "@/lib/receipt-schema";
+import { SAMPLES_PATH_PREFIX, type SampleReceipt } from "@/lib/samples";
+import {
+  SESSION_EXTRACTION_CAP,
+  countExtraction,
+  sessionCapReached,
+} from "@/lib/session-count";
 import {
   listSessionReceipts,
   newStoredReceipt,
@@ -50,6 +57,7 @@ import {
   type StoredReceipt,
 } from "@/lib/session-store";
 import { createOcrPass, type Measurement, type OcrPass } from "@/lib/word-boxes";
+import { SampleRow } from "./SampleRow";
 import { SessionTable, type CopyNote } from "./SessionTable";
 import classes from "./ReceiptWorkspace.module.css";
 
@@ -140,25 +148,136 @@ const NO_IMAGE_COPY =
  */
 type CopyPlace = "receipt" | "session";
 
-/** The copy a visitor reads for each error the route can answer with. */
-const FAILURE_COPY: Record<ExtractionErrorCode, { title: string; body: string }> = {
+/**
+ * The hourly allowance, written here rather than imported.
+ *
+ * `lib/rate-limit.ts` holds `IP_HOURLY_LIMIT` and imports the Upstash client, so
+ * a client component importing it would pull that SDK into the browser bundle.
+ * The same reasoning keeps `PICKER_ACCEPT` written out above. The two numbers
+ * have to be changed together.
+ */
+const IP_HOURLY_LIMIT = 20;
+
+/**
+ * What a visitor reads when the app will not run an extraction.
+ *
+ * `retry` says whether the alert offers the control that sends the same file
+ * again. A refusal that would only be refused again offers none, which is why
+ * both caps carry false: pressing a dead control teaches a visitor nothing.
+ */
+type Refusal = { title: string; body: string; retry: boolean };
+
+/** The copy a visitor reads for each code the app can refuse an upload with. */
+const FAILURE_COPY: Record<ExtractionErrorCode, Refusal> = {
   unsupported_type: {
     title: "The app does not read that file type",
     body: "Pick a JPEG, PNG or WebP image, or a PDF receipt.",
+    retry: true,
   },
   too_large: {
     title: "That file is too large",
     body: "The app reads files up to 8 MB. Try a smaller photograph of the same receipt.",
+    retry: true,
   },
   model_call_failed: {
     title: "The extraction did not finish",
     body: "The model did not answer. Try the same file again.",
+    retry: true,
   },
   validation_failed: {
     title: "The answer did not match the shape the app expects",
     body: "The model's answer did not match the shape the app expects. Try the same file again, or a clearer photograph of the receipt.",
+    retry: true,
+  },
+  rate_limited: {
+    title: `This address has used its ${IP_HOURLY_LIMIT} extractions for the hour`,
+    body: `The app runs ${IP_HOURLY_LIMIT} extractions an hour for each network address, and everyone behind this address shares that allowance. The app checked the limit before it called the model, so this upload reached no model and cost you nothing.`,
+    retry: false,
+  },
+  session_cap_reached: {
+    title: `This session has used its ${SESSION_EXTRACTION_CAP} extractions`,
+    body: `The app runs ${SESSION_EXTRACTION_CAP} extractions per browser session, and this session has spent all ${SESSION_EXTRACTION_CAP}. Open the app in a new tab to start a new session. The receipts below stay readable, correctable and exportable either way.`,
+    retry: false,
   },
 };
+
+/**
+ * The store-outage wording, which arrives as `rate_limited` with no reset time.
+ *
+ * A refusal carrying a reset time means the address spent its allowance. A
+ * refusal carrying none means the counter the app keeps that allowance in did
+ * not answer, so the app refused rather than running the extraction uncounted.
+ * Trying again in a minute is honest advice for an outage and would be a lie for
+ * a spent allowance, which is why the two are worded apart and only this one
+ * offers the control.
+ */
+const LIMITER_OUTAGE_COPY: Refusal = {
+  title: "The app could not check its own hourly limit",
+  body: "The counter the app keeps its hourly limit in did not answer, so it refused this upload rather than running an extraction it could not count. Nothing reached the model. Try again in a minute.",
+  retry: true,
+};
+
+/** Refusals the browser makes on its own, which no route code names. */
+type LocalRefusalCode = "body_too_large" | "sample_unavailable";
+
+const LOCAL_REFUSAL_COPY: Record<LocalRefusalCode, Refusal> = {
+  /**
+   * Worded apart from the 8 MB `too_large` above, because the cap it failed is a
+   * different one: this file is inside the 8 MB the app accepts and outside the
+   * request body the host will carry, even after the browser reduced it.
+   */
+  body_too_large: {
+    title: "That image is too large to send, even reduced",
+    body: "The app reduced the image as far as it will go and the request is still larger than the host carries. Try a photograph cropped to the receipt itself, or one your camera took at a lower resolution.",
+    retry: false,
+  },
+  sample_unavailable: {
+    title: "The app could not load that sample",
+    body: "The sample file did not arrive, so nothing was sent. Press it again, or pick a receipt of your own.",
+    retry: false,
+  },
+};
+
+/**
+ * The reset time in the visitor's own zone.
+ *
+ * The route sends epoch milliseconds rather than a sentence, so the time reads
+ * as the clock on the visitor's wall. The zone name is printed with it, because
+ * a bare "3:00" from a server in another zone is the thing that would confuse.
+ */
+function resetTimeText(resetAt: number): string {
+  return new Date(resetAt).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  });
+}
+
+/** A byte count as megabytes to one decimal place, which is how a visitor reads a file size. */
+function megabytes(bytes: number): string {
+  return `${(bytes / 1_000_000).toFixed(1)} MB`;
+}
+
+/**
+ * What a `rate_limited` refusal reads as, which depends on whether it names a time.
+ *
+ * A refusal carrying a reset time means the address spent its allowance, and the
+ * sentence ends with the clock time it returns. A refusal carrying none means the
+ * counter store did not answer, so there is no window to name and the outage
+ * wording stands in its place.
+ */
+function hourlyRefusal(resetAt?: number): Refusal {
+  if (resetAt === undefined) {
+    return LIMITER_OUTAGE_COPY;
+  }
+
+  const standing = FAILURE_COPY.rate_limited;
+
+  return {
+    ...standing,
+    body: `${standing.body} The allowance returns at ${resetTimeText(resetAt)}.`,
+  };
+}
 
 export function ReceiptWorkspace() {
   const [file, setFile] = useState<File | null>(null);
@@ -188,6 +307,26 @@ export function ReceiptWorkspace() {
    */
   const [itemKeys, setItemKeys] = useState<string[]>([]);
   const [failure, setFailure] = useState<ExtractionErrorCode | null>(null);
+  /**
+   * A refusal that stopped an upload rather than spoiling an extraction.
+   *
+   * The two caps and the two local refusals all sit beside the picker rather than
+   * in the field pane, because they are answers about the upload the visitor just
+   * tried, not about a receipt. Keeping them out of `Phase` is what leaves the
+   * receipt the visitor was already working on where it was, and the wording is
+   * resolved at the moment of the refusal, because the hourly one names a clock
+   * time the route sent.
+   */
+  const [refusal, setRefusal] = useState<Refusal | null>(null);
+  /**
+   * The byte counts of a reduction, when the browser made one.
+   *
+   * Null says nothing was reduced, which is why the notice is absent rather than
+   * saying the app left the file alone.
+   */
+  const [reduction, setReduction] = useState<{ from: number; to: number } | null>(null);
+  /** Which sample the app is fetching, so one control alone shows the spinner. */
+  const [loadingSample, setLoadingSample] = useState<string | null>(null);
   /**
    * Which field the visitor has reached, which is what asks for a region.
    *
@@ -429,6 +568,8 @@ export function ReceiptWorkspace() {
       setRejections({});
       setItemKeys([]);
       setFailure(null);
+      setRefusal(null);
+      setReduction(null);
       setPhase("waiting");
       setSelected(null);
       setMeasurement(null);
@@ -559,85 +700,197 @@ export function ReceiptWorkspace() {
    * boxes describe. A page the app cannot read ends the press there, with no
    * request sent. An image goes straight to the two passes the way it always has.
    */
-  const extract = useCallback(async () => {
-    if (!file || inFlight.current) {
-      return;
-    }
+  const extract = useCallback(
+    async (source?: File) => {
+      /**
+       * The file this press sends.
+       *
+       * A sample passes its file in, because the press that fetched it also
+       * calls `choose`, and the state that call sets has not landed yet.
+       * Everything below reads this one value, so the sample path and the picker
+       * path are the same path.
+       */
+      const chosen = source ?? file;
 
-    inFlight.current = true;
-    setPhase("working");
-    setReceipt(null);
-    setWarnings([]);
-    setEdited([]);
-    setRejections({});
-    setItemKeys([]);
-    setFailure(null);
-    setSelected(null);
-    setOpenId(null);
-    setReopened(false);
-    setCopied(null);
+      if (!chosen || inFlight.current) {
+        return;
+      }
 
-    try {
-      /** The image every later step reads: the file itself, or the page read out of it. */
-      let image = file;
+      /*
+       * The one cap the app enforces without a request. Asking spends nothing,
+       * so the visitor reads the refusal before anything leaves the browser.
+       */
+      if (sessionCapReached()) {
+        setRefusal(FAILURE_COPY.session_cap_reached);
+        return;
+      }
 
-      if (file.type === PDF_TYPE) {
-        const read = await readPdfPage(file);
+      inFlight.current = true;
+      setPhase("working");
+      setReceipt(null);
+      setWarnings([]);
+      setEdited([]);
+      setRejections({});
+      setItemKeys([]);
+      setFailure(null);
+      setRefusal(null);
+      setReduction(null);
+      setSelected(null);
+      setOpenId(null);
+      setReopened(false);
+      setCopied(null);
 
-        if (!read) {
+      try {
+        /** The image every later step reads: the file itself, or the page read out of it. */
+        let image = chosen;
+
+        if (chosen.type === PDF_TYPE) {
+          const read = await readPdfPage(chosen);
+
+          if (!read) {
+            setPhase("failed");
+            return;
+          }
+
+          image = read.page;
+
+          // The text layer, when the page carried one, is already in this page's
+          // pixels, so the OCR pass runs only on a page that yielded no words.
+          if (read.measurement) {
+            holdMeasurement(read.measurement);
+          } else {
+            measure(image);
+          }
+        } else {
+          // Both passes start from this one press. The measuring runs beside the
+          // request rather than after it, and the fields land whenever they land.
+          measure(image);
+        }
+
+        /*
+         * The host carries a smaller request body than the 8 MB file the app
+         * accepts, so the browser re-encodes an image that will not fit and
+         * sends that. A rasterized PDF page reaches this as an image like any
+         * other. The measuring pass above ran on the larger copy on purpose: it
+         * reads the print better there, and the mark is positioned in
+         * percentages of whatever was measured, so one rectangle serves both
+         * copies whichever the pane shows.
+         */
+        const fit = await fitForUpload(image);
+
+        if (fit.status === "too_large") {
+          setRefusal(LOCAL_REFUSAL_COPY.body_too_large);
+          setPhase("waiting");
+          return;
+        }
+
+        if (fit.status === "reduced") {
+          image = fit.file;
+          setReduction({ from: fit.from, to: fit.to });
+          // The pane shows the image the model read, so a visitor checking a
+          // field against the picture checks it against the right picture.
+          showPreview(fit.file);
+        }
+
+        const form = new FormData();
+        form.set("file", image);
+
+        const response = await fetch("/api/extract", { method: "POST", body: form });
+        const body = (await response.json()) as ExtractionResponse;
+
+        if (isExtractionError(body)) {
+          // The hourly limit refuses an upload rather than spoiling an
+          // extraction, so it reads beside the picker and offers no retry. It
+          // spends no session count either: the route checks the allowance
+          // before it reads the body, so no model call was made.
+          if (body.error.code === "rate_limited") {
+            setRefusal(hourlyRefusal(body.error.resetAt));
+            setPhase("waiting");
+            return;
+          }
+
+          /*
+           * The counted unit is one model call. A refusal the route made before
+           * it called the model costs nothing, so a wrong type and an oversized
+           * file spend no count; a call that was made and then failed does spend
+           * one, because the cost was already incurred.
+           */
+          if (body.error.code === "model_call_failed" || body.error.code === "validation_failed") {
+            countExtraction();
+          }
+
+          setFailure(body.error.code);
           setPhase("failed");
           return;
         }
 
-        image = read.page;
+        // The model answered, so the call was made and the session spends one,
+        // whether or not the answer turned out to be a receipt.
+        countExtraction();
 
-        // The text layer, when the page carried one, is already in this page's
-        // pixels, so the OCR pass runs only on a page that yielded no words.
-        if (read.measurement) {
-          holdMeasurement(read.measurement);
-        } else {
-          measure(image);
+        setReceipt(body);
+        // The checks run here, on what the browser already holds. No second
+        // request leaves the page to produce a warning.
+        const found = body.isReceipt ? arithmeticWarnings(body) : [];
+        setWarnings(found);
+        setItemKeys(freshKeys((body.lineItems ?? []).length));
+        setPhase(body.isReceipt ? "result" : "not-a-receipt");
+
+        // A refused upload holds no value in any column the table lists, so the
+        // session keeps the receipts the model read and nothing else.
+        if (body.isReceipt) {
+          const record = newStoredReceipt(body, found);
+          setOpenId(record.id);
+          remember(record);
         }
-      } else {
-        // Both passes start from this one press. The measuring runs beside the
-        // request rather than after it, and the fields land whenever they land.
-        measure(image);
-      }
-
-      const form = new FormData();
-      form.set("file", image);
-
-      const response = await fetch("/api/extract", { method: "POST", body: form });
-      const body = (await response.json()) as ExtractionResponse;
-
-      if (isExtractionError(body)) {
-        setFailure(body.error.code);
+      } catch {
+        setFailure("model_call_failed");
         setPhase("failed");
+      } finally {
+        inFlight.current = false;
+      }
+    },
+    [file, freshKeys, measure, readPdfPage, holdMeasurement, remember, showPreview],
+  );
+
+  /**
+   * Fetches a sample and sends it through the same submit an upload uses.
+   *
+   * `choose` clears the workspace exactly as picking a file does, so the sample
+   * becomes the chosen file and the preview, the try-again control and the
+   * session record all behave as they would for an upload. The file reaches
+   * `extract` as an argument, because the state `choose` set has not landed yet.
+   */
+  const loadSample = useCallback(
+    async (sample: SampleReceipt) => {
+      if (inFlight.current || loadingSample !== null) {
         return;
       }
 
-      setReceipt(body);
-      // The checks run here, on what the browser already holds. No second request
-      // leaves the page to produce a warning.
-      const found = body.isReceipt ? arithmeticWarnings(body) : [];
-      setWarnings(found);
-      setItemKeys(freshKeys((body.lineItems ?? []).length));
-      setPhase(body.isReceipt ? "result" : "not-a-receipt");
+      setLoadingSample(sample.id);
 
-      // A refused upload holds no value in any column the table lists, so the
-      // session keeps the receipts the model read and nothing else.
-      if (body.isReceipt) {
-        const record = newStoredReceipt(body, found);
-        setOpenId(record.id);
-        remember(record);
+      try {
+        const response = await fetch(sample.path);
+
+        if (!response.ok) {
+          throw new Error(`the sample answered ${response.status}`);
+        }
+
+        const bytes = await response.blob();
+        const picked = new File([bytes], sample.path.slice(SAMPLES_PATH_PREFIX.length), {
+          type: sample.mediaType,
+        });
+
+        choose(picked);
+        await extract(picked);
+      } catch {
+        setRefusal(LOCAL_REFUSAL_COPY.sample_unavailable);
+      } finally {
+        setLoadingSample(null);
       }
-    } catch {
-      setFailure("model_call_failed");
-      setPhase("failed");
-    } finally {
-      inFlight.current = false;
-    }
-  }, [file, freshKeys, measure, readPdfPage, holdMeasurement, remember]);
+    },
+    [choose, extract, loadingSample],
+  );
 
   /**
    * Takes one committed edit, or refuses it.
@@ -762,8 +1015,8 @@ export function ReceiptWorkspace() {
    * out, so it carries a reason rather than one of the route's error codes. Both
    * end in the same alert beside the same try-again control.
    */
-  const failureCopy = pdfFailure
-    ? PDF_FAILURE_COPY[pdfFailure]
+  const failureCopy: Refusal | null = pdfFailure
+    ? { ...PDF_FAILURE_COPY[pdfFailure], retry: true }
     : failure
       ? FAILURE_COPY[failure]
       : null;
@@ -797,6 +1050,8 @@ export function ReceiptWorkspace() {
       setSelected(null);
       setRejections({});
       setFailure(null);
+      setRefusal(null);
+      setReduction(null);
       setCopied(null);
       setOpenId(record.id);
       setReceipt(record.receipt);
@@ -918,7 +1173,10 @@ export function ReceiptWorkspace() {
                 clearable
                 className={classes.picker}
               />
-              <Button onClick={extract} disabled={!file || phase === "working"}>
+              <Button
+                onClick={() => void extract()}
+                disabled={!file || phase === "working" || loadingSample !== null}
+              >
                 Extract the fields
               </Button>
             </Group>
@@ -928,8 +1186,34 @@ export function ReceiptWorkspace() {
               session&apos;s receipts live in this browser, survive a reload and end
               when you close the tab.
             </Text>
+
+            {/* A refused upload is answered where the visitor pressed, and the
+                receipts below stay readable, correctable and exportable. */}
+            {refusal ? (
+              <Alert role="status" color="yellow" title={refusal.title}>
+                <Stack align="flex-start" gap="sm">
+                  <Text size="sm">{refusal.body}</Text>
+                  {refusal.retry ? (
+                    <Button
+                      variant="light"
+                      color="yellow"
+                      onClick={() => void extract()}
+                      disabled={!file}
+                    >
+                      Try the same file again
+                    </Button>
+                  ) : null}
+                </Stack>
+              </Alert>
+            ) : null}
           </Stack>
         </Paper>
+
+        <SampleRow
+          onPick={(sample) => void loadSample(sample)}
+          loadingId={loadingSample}
+          busy={phase === "working" || loadingSample !== null}
+        />
 
         <div className={classes.panes}>
           <Paper withBorder radius="md" p="md" className={classes.documentPane}>
@@ -945,6 +1229,15 @@ export function ReceiptWorkspace() {
                     that page is an image, because the model and the measuring pass both read it.
                   </Text>
                 </Group>
+              ) : null}
+
+              {reduction ? (
+                <Text size="sm" c="dimmed">
+                  The app reduced this image to send it, from {megabytes(reduction.from)} to{" "}
+                  {megabytes(reduction.to)}, because the host carries a smaller request than
+                  the 8 MB file the app accepts. The pane below shows the smaller copy the
+                  model read.
+                </Text>
               ) : null}
 
               {pageCount !== null && pageCount > 1 ? (
@@ -1122,9 +1415,16 @@ export function ReceiptWorkspace() {
               <Alert color="red" title={failureCopy.title}>
                 <Stack align="flex-start" gap="sm">
                   <Text size="sm">{failureCopy.body}</Text>
-                  <Button variant="light" color="red" onClick={extract} disabled={!file}>
-                    Try the same file again
-                  </Button>
+                  {failureCopy.retry ? (
+                    <Button
+                      variant="light"
+                      color="red"
+                      onClick={() => void extract()}
+                      disabled={!file}
+                    >
+                      Try the same file again
+                    </Button>
+                  ) : null}
                 </Stack>
               </Alert>
             ) : null}
