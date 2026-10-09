@@ -22,7 +22,7 @@ There is no chat box. You give it a receipt, it gives you data, and it shows its
 | Money | Decimal strings compared over scaled integers, written in this repo | `lib/decimal.ts` lifts two decimal strings to a common scale as `BigInt` and compares exactly. A float would make the arithmetic check report differences the receipt never printed, and integer cents would round away the third decimal place a quantity can carry. |
 | Session | IndexedDB keyed to the browser tab | The session table survives a reload and dies with the tab, which needs no database and puts no receipt on a server. |
 | Rate limiting | A fixed hourly window per address, counted in Upstash Redis | A fixed window lets a refusal name the wall-clock hour the allowance returns. The counter is checked before the model call, because the limit exists for the API bill. |
-| Host | Vercel, production deploying from `main` | The extraction is one serverless function beside the static pages. Vercel's 4.5 MB request body cap is also why the browser downscales a large photograph before it posts. |
+| Host | Vercel, production deploying from `main`, with Web Analytics on the production deployment alone | The extraction is one serverless function beside the static pages. Vercel's 4.5 MB request body cap is also why the browser downscales a large photograph before it posts. The layout renders the analytics component only when `VERCEL_ENV` is `production`, because Vercel builds a preview with `NODE_ENV` set to `production` too. |
 | Tests | Vitest over the schema, the decimal arithmetic, the matcher and the exports | Every rule an edit follows lives in a pure module, so the rules are unit-tested even though no test environment renders a component yet. |
 
 ## Setup from a clean clone
@@ -64,7 +64,7 @@ The three sample receipts under `public/samples/` are committed. `node scripts/m
 
 **Corrections rerun both checks.** Every value is editable where it sits. Blur or Enter commits an edit, Escape puts back what the field held, and the field's own validator read off the schema refuses a date written the wrong way round. A committed edit clears that field's confidence, keeps the characters the model read the original from so the highlight still works, and marks the cell as something the visitor typed.
 
-**Nothing is stored.** The upload lives in memory for the length of one request. The extracted receipts live in the visitor's own browser, keyed to the tab. The only state on a server is a counter of how many scans an address has spent this hour, which holds no receipt and no image.
+**No receipt is stored.** The upload lives in memory for the length of one request. The extracted receipts live in the visitor's own browser, keyed to the tab. Two things are kept on a server. A counter records how many scans an address has spent this hour. Vercel Web Analytics counts each page view on the production site with no cookie, recording the page, the referring site, the country and the kind of browser and device; previews and local runs count nothing. Neither holds a receipt or an image, because no receipt ever reaches a page address.
 
 ## The figures this README states
 

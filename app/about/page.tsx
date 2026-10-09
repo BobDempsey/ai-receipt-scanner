@@ -67,7 +67,7 @@ const STACK_ROWS: readonly [string, string][] = [
   ["Money", "Decimal strings compared over scaled integers, written in this repo"],
   ["Session", "IndexedDB keyed to the browser tab. No database, nothing on a server."],
   ["Rate limiting", "A fixed hourly window per address, counted in Upstash Redis"],
-  ["Host", "Vercel, with production deploying from the main branch"],
+  ["Host", "Vercel, with production deploying from the main branch and Web Analytics counting its page views"],
   ["Tests", "Vitest over the schema, the arithmetic, the matcher and the exports"],
 ];
 
@@ -230,9 +230,12 @@ export default function AboutPage() {
           <Text maw="var(--prose-measure)">
             Your upload lives in memory for the length of one request and is never
             written to disk. The extracted receipts live in your own browser, keyed to
-            this tab, so a reload keeps them and closing the tab ends them. The only
-            state on a server is a counter of how many scans an address has spent this
-            hour, which holds no receipt and no image.
+            this tab, so a reload keeps them and closing the tab ends them. Two things
+            are kept on a server. A counter records how many scans an address has spent
+            this hour. Vercel Web Analytics counts each page view on the live site with
+            no cookie, recording the page, the referring site, the country and the kind
+            of browser and device. Neither holds a receipt or an image, because no
+            receipt ever reaches a page address.
           </Text>
           <Text maw="var(--prose-measure)">
             The three sample receipts are invented. The merchants, the addresses and the
