@@ -43,7 +43,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               server component; the toggle, the year and the theme are client
               leaves beneath it. */}
           <SiteNav />
-          {children}
+          {/* The page grows to fill the viewport so the footer sits at the
+              bottom of a short page rather than leaving a gap below it. */}
+          <main className="pageMain">{children}</main>
           <SiteFooter />
         </SiteProviders>
         {/* Page views count on the production deployment alone. Vercel builds
