@@ -12,4 +12,9 @@
 - [x] Slice 7: caps, rate limits and the three samples
 - [x] Slice 8: landing page, chrome, About and README
 - [x] Slice 9: 40 fixtures and the accuracy numbers
+- [ ] Rotate the OpenAI key
+- [ ] Fix the currency highlighting defect
+- [ ] Retake the screenshots
+- [ ] CI on GitHub Actions and Vercel Web Analytics
+- [ ] Playwright from upload to export
 - [ ] Ship: portfolio card, resume entry, blog post
