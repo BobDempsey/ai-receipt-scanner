@@ -27,7 +27,7 @@ import {
   type FieldAddress,
 } from "@/lib/field-edit";
 import { sourceTextFor } from "@/lib/field-source";
-import { buildRegionMap, regionFor } from "@/lib/highlight-match";
+import { buildRegionMap, isMarkable, regionFor } from "@/lib/highlight-match";
 import { PdfPageError, readFirstPage, type PdfFailureReason } from "@/lib/pdf-page";
 import { receiptsToCsv } from "@/lib/receipt-csv";
 import {
@@ -121,12 +121,19 @@ const PDF_FAILURE_COPY: Record<PdfFailureReason, { title: string; body: string }
   },
 };
 
-/** The two sentences the panel prints when the selected field has no region. */
+/** The three sentences the panel prints when the selected field has no region. */
 const NO_REGION_COPY = {
   /** The receipt printed nothing to find, so no match was ever attempted. */
   absent: "The receipt printed no value here, so there is nothing on the image to mark.",
   /** The model quoted text the pass could not find, which is the honest failure. */
   unmatched: "The app could not find this text on the image, so it marked no region.",
+  /**
+   * The app declines to mark this field, which `isMarkable` decides and
+   * `fixtures/REPORT.md` is the evidence for. Worded as a decision rather than
+   * as a failure, because nothing failed: no match was attempted.
+   */
+  unmarked:
+    "This app does not mark the currency, because a symbol repeated down a column of amounts points at no one place on the receipt. The characters the model read it from are listed beside the value.",
 } as const;
 
 /**
@@ -424,10 +431,15 @@ export function ReceiptWorkspace() {
    * The sentence under the selected field, on the two absent cases.
    *
    * A field with a region gets none, because the mark on the image already says
-   * where the value came from. The two absent cases are worded apart so an
+   * where the value came from. The three absent cases are worded apart so an
    * absent mark reads as an answer rather than as a pane that failed to draw.
-   * Neither sentence appears while the pass is still running or after it failed:
-   * the document pane says so once for the whole image instead.
+   * No sentence appears while the pass is still running or after it failed: the
+   * document pane says so once for the whole image instead.
+   *
+   * The unmarked case is asked first, and through the same `isMarkable` the
+   * region map refuses on, so the two cannot drift: a field the map declines to
+   * score has no text the pass looked for, and saying it could not be found
+   * would claim a search that never happened.
    */
   const selectionNote = useMemo(() => {
     if (!receipt || !selected || ocrPhase !== "ready" || !regions) {
@@ -435,6 +447,10 @@ export function ReceiptWorkspace() {
     }
     if (regionFor(regions, selected) !== null) {
       return null;
+    }
+
+    if (!isMarkable(selected)) {
+      return { key: addressKey(selected), message: NO_REGION_COPY.unmarked };
     }
 
     return {

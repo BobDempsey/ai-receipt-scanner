@@ -238,6 +238,33 @@ export function bestMatch(
 export type RegionMap = ReadonlyMap<string, HighlightRegion>;
 
 /**
+ * Whether the app marks a region for one field at all.
+ *
+ * `currency` is the only field it refuses, and the evidence is in
+ * `fixtures/REPORT.md`. Asked for the characters it read the currency from, the
+ * model answers with the symbol and a whole address line, `$\nFairhaven Bay, OR
+ * 97000`, or with an invoice column heading, `AMOUNT EUR`. The matcher then does
+ * its job, finds those words on the image and marks the address or the heading:
+ * 29 of the 37 wrong marks in the slice 9 run, 25 of them at a perfect 1.000, so
+ * no threshold that keeps a correct mark can refuse them. The value is right on
+ * all forty fixtures; only the region is wrong, and a one-character symbol
+ * repeated down a column of amounts is not a region a visitor gains anything
+ * from seeing marked.
+ *
+ * It takes an address rather than a field name because both callers already hold
+ * one: `buildRegionMap` walks addresses, and the panel keeps the selected
+ * address. Asking the same question in both places is what keeps the map and the
+ * sentence the panel prints from disagreeing about which fields are marked.
+ *
+ * Anything added here needs evidence of the same shape: a field whose quoted
+ * source text names something other than the value, measured rather than
+ * supposed.
+ */
+export function isMarkable(address: FieldAddress): boolean {
+  return !(address.kind === "flat" && address.field === "currency");
+}
+
+/**
  * Every field of one receipt matched against one box set, in a single pass.
  *
  * The map is derived rather than stored. Holding it in state would make it a
@@ -249,13 +276,25 @@ export type RegionMap = ReadonlyMap<string, HighlightRegion>;
  * arguments.
  *
  * A field with no match contributes no entry, so an absent region reads the same
- * whether the receipt printed no value or the pass could not find the text. The
- * panel tells those two apart from the `sourceText` itself.
+ * whether the receipt printed no value, the pass could not find the text, or the
+ * app declines to mark that field at all. The panel tells those three apart from
+ * `isMarkable` and the `sourceText` itself.
+ *
+ * A refused address is skipped before it is scored rather than filtered after,
+ * because the refusal is a fact about the field and `bestMatch` scores text
+ * against lines knowing nothing about fields. Teaching it which field it is
+ * working on would put field knowledge in the one module with no business
+ * holding it, which is the same line slice 5 held when the PDF text layer
+ * arrived beside the OCR pass.
  */
 export function buildRegionMap(receipt: Receipt, lines: readonly TextLine[]): RegionMap {
   const regions = new Map<string, HighlightRegion>();
 
   for (const address of editableAddresses(receipt)) {
+    if (!isMarkable(address)) {
+      continue;
+    }
+
     const match = bestMatch(sourceTextFor(receipt, address), lines);
 
     if (match !== null) {

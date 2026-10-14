@@ -5,6 +5,7 @@ import {
   bestMatch,
   buildRegionMap,
   candidateRuns,
+  isMarkable,
   levenshteinDistance,
   normalizeForMatch,
   regionFor,
@@ -359,5 +360,77 @@ describe("regionFor", () => {
 
     expect(regionFor(regions, { kind: "flat", field: "date" })).toBeNull();
     expect(regionFor(regions, { kind: "flat", field: "time" })).toBeNull();
+  });
+});
+
+describe("isMarkable", () => {
+  it("refuses the currency field", () => {
+    expect(isMarkable({ kind: "flat", field: "currency" })).toBe(false);
+  });
+
+  it("marks every other flat field", () => {
+    expect(isMarkable({ kind: "flat", field: "total" })).toBe(true);
+    expect(isMarkable({ kind: "flat", field: "merchantAddress" })).toBe(true);
+  });
+
+  it("marks a tax cell and a line item cell", () => {
+    expect(isMarkable({ kind: "tax", index: 0, cell: "amount" })).toBe(true);
+    expect(isMarkable({ kind: "item", index: 0, cell: "description" })).toBe(true);
+  });
+});
+
+/**
+ * The failure `fixtures/REPORT.md` measured, reproduced on the two shapes the
+ * model actually answered with: the symbol carrying a whole address line, and an
+ * invoice column heading. Both match a real line at a perfect score, which is why
+ * the refusal is a rule about the field rather than a higher threshold.
+ */
+describe("buildRegionMap and the currency the model quotes wrong", () => {
+  function addressLines(): TextLine[] {
+    return [
+      line(word("Fairhaven", 10, 80), word("Bay,", 120, 80), word("OR", 200, 80), word("97000", 260, 80)),
+      line(word("TOTAL", 10, 300), word("42.00", 420, 300)),
+    ];
+  }
+
+  it("marks nothing for a currency quoted with an address line", () => {
+    const quoted = receipt({
+      currencySourceText: "$\nFairhaven Bay, OR 97000",
+      merchantAddress: "Fairhaven Bay, OR 97000",
+      merchantAddressConfidence: 0.95,
+      merchantAddressSourceText: "Fairhaven Bay, OR 97000",
+    });
+
+    expect(regionFor(buildRegionMap(quoted, addressLines()), { kind: "flat", field: "currency" })).toBeNull();
+  });
+
+  it("still marks the address line for the field that did read it", () => {
+    const quoted = receipt({
+      currencySourceText: "$\nFairhaven Bay, OR 97000",
+      merchantAddress: "Fairhaven Bay, OR 97000",
+      merchantAddressConfidence: 0.95,
+      merchantAddressSourceText: "Fairhaven Bay, OR 97000",
+    });
+
+    expect(regionFor(buildRegionMap(quoted, addressLines()), { kind: "flat", field: "merchantAddress" })).toEqual({
+      left: 10,
+      top: 80,
+      width: 310,
+      height: 20,
+    });
+  });
+
+  it("marks nothing for a currency quoted as an invoice column heading", () => {
+    const heading = [line(word("AMOUNT", 10, 120), word("EUR", 120, 120))];
+    const quoted = receipt({ currency: "EUR", currencySourceText: "AMOUNT EUR" });
+
+    expect(buildRegionMap(quoted, heading).has("currency")).toBe(false);
+  });
+
+  it("refuses the currency even when its source text names the symbol alone", () => {
+    const symbolLine = [line(word("£", 10, 120))];
+    const quoted = receipt({ currencySourceText: "£" });
+
+    expect(buildRegionMap(quoted, symbolLine).has("currency")).toBe(false);
   });
 });
