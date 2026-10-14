@@ -34,6 +34,10 @@ export function SiteNav() {
         </Link>
 
         <Group gap="xs" wrap="nowrap">
+          <Link href="/about" className={classes.about}>
+            About
+          </Link>
+
           <Button
             component={Link}
             href="/#scan"

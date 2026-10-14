@@ -2,9 +2,9 @@
    first and last characters line up with the sections above it. */
 
 .root {
-  margin-top: var(--mantine-spacing-xl);
+  margin-top: var(--mantine-spacing-lg);
   border-top: rem(1px) solid var(--mantine-color-default-border);
-  padding-block: var(--mantine-spacing-lg);
+  padding-block: var(--mantine-spacing-xs);
 }
 
 .inner {

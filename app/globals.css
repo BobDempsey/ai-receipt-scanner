@@ -27,18 +27,28 @@ body {
   height: 100%;
 }
 
-/* There is deliberately no `#__next, body > div { min-height: 100% }` here. The
-   generator writes that rule for the Pages Router, where `#__next` wraps the
-   whole app. The App Router has no such wrapper, so the only `body > div`
-   elements are React's hidden suspense node and Mantine's shared portal node,
-   which both render after the footer. The rule gave the portal node a viewport
-   of height, which read as the footer running down the rest of the page: a
-   744px blank band under it at 1280x800 on every page. Anything that needs a
-   full-height frame asks for it on its own element. */
+/* The chrome is a flex column that fills the viewport, so the footer sits at the
+   bottom of a short page rather than leaving a gap of empty body beneath it.
 
-/* The nav is fixed, so the page reserves its height rather than sliding under it. */
+   It goes on `body` itself because the App Router has no wrapper element around
+   the nav, the main and the footer. The selector this rule used to carry,
+   `#__next, body > div`, matched neither: `#__next` is the Pages Router's
+   wrapper, and the only `body > div` elements here are React's hidden suspense
+   node and Mantine's shared portal node, which both render after the footer. A
+   min-height there pinned nothing and put a viewport of blank page under the
+   footer instead, 744px of it at 1280x800. The nav is fixed, so it leaves the
+   flow and the padding below is what reserves its height. */
 body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
   padding-top: var(--nav-height);
+}
+
+/* The page content grows to take the slack, which is what pushes the footer
+   down on a page too short to fill the screen. */
+.pageMain {
+  flex: 1 0 auto;
 }
 
 /* Tight tracking on the headline scale. Mantine's theme carries the sizes and the

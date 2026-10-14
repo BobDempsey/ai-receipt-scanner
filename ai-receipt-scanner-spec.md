@@ -79,6 +79,8 @@ The table is one IndexedDB database, `ai-receipt-scanner`, holding a `receipts` 
 
 The only server-side state is rate-limit counters. They live in Upstash Redis, reached over its REST API with the `KV_REST_API_URL` and `KV_REST_API_TOKEN` the Vercel marketplace integration writes, because a counter in a serverless function's memory counts one warm instance rather than an address. There is no database to seed, which is also why nothing one visitor does changes what the next one sees.
 
+The host counts page views on the production deployment through Vercel Web Analytics, which sets no cookie and records the page, the referring site, the country and the kind of browser and device. That count is Vercel's rather than state any route of this app writes, and it carries no receipt, because no upload, field or edit ever reaches a page address. A preview deployment and a local run count nothing. The About page and the README both say so beside the rate-limit counter.
+
 Say all of this on the page, next to the drop zone. A stranger uploading a real receipt deserves to know before they do it, not in the About page afterwards.
 
 ## 6. Caps and limits
@@ -157,7 +159,7 @@ Document the failure cases in the README rather than hiding them, and name them 
 | OCR for boxes | tesseract.js in a web worker, its worker, wasm core and language data self-hosted under `public/tesseract/`; `pdfjs-dist` 6.4.299 for a PDF's first page, its text layer and its rasterizing, with its worker self-hosted under `public/pdfjs/` |
 | Session state | IndexedDB, database `ai-receipt-scanner`, with the tab's session id and its extraction count in `sessionStorage` |
 | Rate-limit counters | Upstash Redis over its REST API through `@upstash/redis`, keyed by address and clock hour |
-| Host | Vercel, with Web Analytics in production builds only |
+| Host | Vercel, with Web Analytics from `@vercel/analytics` 2.0.1 rendered by the root layout only when `VERCEL_ENV` is `production`, so a preview and a local run count nothing |
 | Tests | Vitest for the schema, the arithmetic checks, the matcher and the fixture comparison in `lib/accuracy.ts`; Playwright for the upload-to-export path; `scripts/measure-accuracy.mjs` as a manual harness over `fixtures/`, in neither the suite nor the build |
 
 Slice 8 measured the contrast rather than assuming it, and the shipped ratios are the numbers a later theme change has to beat: body text at 21.00 to 1 in light and 9.37 to 1 in dark, the accent against the surface behind it at 5.00 and 7.29, dimmed text at 8.18 and 7.83, and a label on a filled accent at 5.00 and 9.86. The shades moved because the defaults failed: teal 6 measured 2.55 to 1 against the white body and teal 8 measured 3.94 to 1 against the dark one, and Mantine's own dimmed text measured 3.32 and 4.04.
