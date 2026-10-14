@@ -27,10 +27,14 @@ body {
   height: 100%;
 }
 
-#__next,
-body > div {
-  min-height: 100%;
-}
+/* There is deliberately no `#__next, body > div { min-height: 100% }` here. The
+   generator writes that rule for the Pages Router, where `#__next` wraps the
+   whole app. The App Router has no such wrapper, so the only `body > div`
+   elements are React's hidden suspense node and Mantine's shared portal node,
+   which both render after the footer. The rule gave the portal node a viewport
+   of height, which read as the footer running down the rest of the page: a
+   744px blank band under it at 1280x800 on every page. Anything that needs a
+   full-height frame asks for it on its own element. */
 
 /* The nav is fixed, so the page reserves its height rather than sliding under it. */
 body {
